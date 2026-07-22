@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/app/providers/auth-provider'
+import { useAwardXp } from '@/hooks/use-award-xp'
 import { useRealtimeTable } from '@/hooks/use-realtime'
 import { queryKeys } from '@/lib/query-keys'
 import {
@@ -57,11 +58,13 @@ export function useAssignments() {
 export function useCreateAssignment() {
   const { user, profile } = useAuth()
   const queryClient = useQueryClient()
+  const awardXp = useAwardXp()
   return useMutation({
     mutationFn: (input: AssignmentInput) =>
       assignmentsService.create(user!.id, profile?.plan ?? 'free', input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.assignments(user!.id) })
+      void awardXp('assignment_created')
     },
   })
 }
@@ -69,6 +72,7 @@ export function useCreateAssignment() {
 export function useUpdateAssignment() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const awardXp = useAwardXp()
   return useMutation({
     mutationFn: ({ id, patch }: { id: string; patch: Partial<AssignmentInput> }) =>
       assignmentsService.update(id, patch),
@@ -77,18 +81,23 @@ export function useUpdateAssignment() {
       const key = queryKeys.assignments(user!.id)
       await queryClient.cancelQueries({ queryKey: key })
       const previous = queryClient.getQueryData<Assignment[]>(key)
+      // Reward the first transition into "submitted".
+      const wasSubmitted = previous?.find((a) => a.id === id)?.status === 'submitted'
       if (previous) {
         queryClient.setQueryData<Assignment[]>(
           key,
           previous.map((a) => (a.id === id ? ({ ...a, ...patch } as Assignment) : a)),
         )
       }
-      return { previous }
+      return { previous, justSubmitted: patch.status === 'submitted' && !wasSubmitted }
     },
     onError: (_error, _vars, context) => {
       if (context?.previous) {
         queryClient.setQueryData(queryKeys.assignments(user!.id), context.previous)
       }
+    },
+    onSuccess: (_data, _vars, context) => {
+      if (context?.justSubmitted) void awardXp('assignment_submitted')
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.assignments(user!.id) })

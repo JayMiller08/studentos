@@ -160,6 +160,34 @@ export const router = createBrowserRouter([
         },
       },
       {
+        path: 'habits',
+        lazy: async () => {
+          const { HabitsPage } = await import('@/features/habits/habits-page')
+          return { element: <HabitsPage /> }
+        },
+      },
+      {
+        path: 'budget',
+        lazy: async () => {
+          const { BudgetPage } = await import('@/features/budget/budget-page')
+          return { element: <BudgetPage /> }
+        },
+      },
+      {
+        path: 'notes',
+        lazy: async () => {
+          const { NotesPage } = await import('@/features/notes/notes-page')
+          return { element: <NotesPage /> }
+        },
+      },
+      {
+        path: 'achievements',
+        lazy: async () => {
+          const { AchievementsPage } = await import('@/features/gamification/achievements-page')
+          return { element: <AchievementsPage /> }
+        },
+      },
+      {
         path: 'settings',
         lazy: async () => {
           const { SettingsPage } = await import('@/features/settings/settings-page')

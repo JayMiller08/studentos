@@ -1,6 +1,6 @@
-import { LogOut, Menu, Settings as SettingsIcon, User } from 'lucide-react'
+import { LogOut, Menu, Settings as SettingsIcon, User, Zap } from 'lucide-react'
 import * as React from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { MOBILE_NAV_ITEMS, NAV_SECTIONS, type NavItem } from '@/app/navigation'
 import { useAuth } from '@/app/providers/auth-provider'
 import { Logo } from '@/components/logo'
@@ -105,6 +105,21 @@ function UserMenu() {
   )
 }
 
+function LevelBadge() {
+  const { profile } = useAuth()
+  if (!profile) return null
+  return (
+    <Link
+      to="/app/achievements"
+      className="border-primary/25 bg-primary/8 text-primary hover:bg-primary/12 hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors sm:inline-flex"
+      aria-label={`Level ${profile.level}, view achievements`}
+    >
+      <Zap aria-hidden className="size-3.5" />
+      Lv {profile.level}
+    </Link>
+  )
+}
+
 function DemoBanner() {
   const { isDemo } = useAuth()
   if (!isDemo) return null
@@ -194,6 +209,7 @@ export function AppLayout() {
           </NavLink>
 
           <div className="ml-auto flex items-center gap-1.5">
+            <LevelBadge />
             <NotificationsBell />
             <ThemeToggle />
             <UserMenu />

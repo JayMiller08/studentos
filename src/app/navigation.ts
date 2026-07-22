@@ -6,9 +6,13 @@ import {
   LayoutDashboard,
   ListTodo,
   type LucideIcon,
+  NotebookPen,
+  PiggyBank,
   Settings,
   Sparkles,
   Timer,
+  Trophy,
+  Repeat,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -48,6 +52,15 @@ export const NAV_SECTIONS: NavSection[] = [
       { to: '/app/smart-plan', label: 'Smart Plan', icon: Sparkles },
       { to: '/app/coach', label: 'AI Coach', icon: Bot },
       { to: '/app/analytics', label: 'Analytics', icon: BarChart3 },
+    ],
+  },
+  {
+    label: 'Life',
+    items: [
+      { to: '/app/habits', label: 'Habits', icon: Repeat },
+      { to: '/app/budget', label: 'Budget', icon: PiggyBank },
+      { to: '/app/notes', label: 'Notes', icon: NotebookPen },
+      { to: '/app/achievements', label: 'Achievements', icon: Trophy },
     ],
   },
   {
