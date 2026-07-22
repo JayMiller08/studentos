@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from '@/lib/env'
 import { table } from '@/services/db'
 import type { AuthUser } from '@/services/auth-service'
 import { DEFAULT_NOTIFICATION_PREFS, type Profile } from '@/types/models'
@@ -25,6 +26,14 @@ export const profileService = {
   async ensure(user: AuthUser): Promise<Profile> {
     const existing = await profiles().get(user.id)
     if (existing) return existing
+
+    // First demo sign-in: populate a believable sample workload so every
+    // feature demonstrates real behavior instead of empty states.
+    if (!isSupabaseConfigured) {
+      const { ensureDemoSeed } = await import('@/lib/demo-seed')
+      ensureDemoSeed(user.id)
+    }
+
     return profiles().upsert({
       id: user.id,
       email: user.email,

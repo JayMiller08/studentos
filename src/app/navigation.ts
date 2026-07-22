@@ -1,7 +1,11 @@
 import {
+  BookOpen,
+  CalendarDays,
   LayoutDashboard,
+  ListTodo,
   type LucideIcon,
   Settings,
+  Timer,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -27,6 +31,15 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [{ to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true }],
   },
   {
+    label: 'Study',
+    items: [
+      { to: '/app/planner', label: 'Planner', icon: ListTodo },
+      { to: '/app/assignments', label: 'Assignments', icon: BookOpen },
+      { to: '/app/calendar', label: 'Calendar', icon: CalendarDays },
+      { to: '/app/focus', label: 'Focus', icon: Timer },
+    ],
+  },
+  {
     label: 'Account',
     items: [{ to: '/app/settings', label: 'Settings', icon: Settings }],
   },
@@ -35,5 +48,8 @@ export const NAV_SECTIONS: NavSection[] = [
 /** Items pinned to the mobile bottom navigation (max 5 for thumb reach). */
 export const MOBILE_NAV_ITEMS: NavItem[] = [
   { to: '/app', label: 'Home', icon: LayoutDashboard, end: true },
-  { to: '/app/settings', label: 'Settings', icon: Settings },
+  { to: '/app/planner', label: 'Planner', icon: ListTodo },
+  { to: '/app/assignments', label: 'Work', icon: BookOpen },
+  { to: '/app/focus', label: 'Focus', icon: Timer },
+  { to: '/app/settings', label: 'More', icon: Settings },
 ]

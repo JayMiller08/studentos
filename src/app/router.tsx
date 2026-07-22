@@ -111,6 +111,34 @@ export const router = createBrowserRouter([
         },
       },
       {
+        path: 'planner',
+        lazy: async () => {
+          const { PlannerPage } = await import('@/features/planner/planner-page')
+          return { element: <PlannerPage /> }
+        },
+      },
+      {
+        path: 'assignments',
+        lazy: async () => {
+          const { AssignmentsPage } = await import('@/features/assignments/assignments-page')
+          return { element: <AssignmentsPage /> }
+        },
+      },
+      {
+        path: 'calendar',
+        lazy: async () => {
+          const { CalendarPage } = await import('@/features/calendar/calendar-page')
+          return { element: <CalendarPage /> }
+        },
+      },
+      {
+        path: 'focus',
+        lazy: async () => {
+          const { FocusPage } = await import('@/features/focus/focus-page')
+          return { element: <FocusPage /> }
+        },
+      },
+      {
         path: 'settings',
         lazy: async () => {
           const { SettingsPage } = await import('@/features/settings/settings-page')
