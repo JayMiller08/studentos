@@ -97,7 +97,17 @@ export function scoreAssignment(assignment: Assignment, options: PriorityOptions
   const normalizer = urgencyBlend + weightBlend + 0.45
 
   const score = Math.round(clamp(blend / normalizer, 0, 1) * 100)
-  const band = score >= 75 ? 'critical' : score >= 55 ? 'high' : score >= 35 ? 'medium' : 'low'
+  const overdue = minutesToDue < 0
+  // Overdue work is always a fire, whatever its weight.
+  const band = overdue
+    ? 'critical'
+    : score >= 75
+      ? 'critical'
+      : score >= 55
+        ? 'high'
+        : score >= 35
+          ? 'medium'
+          : 'low'
 
   const dueLabel =
     daysRemaining <= 0

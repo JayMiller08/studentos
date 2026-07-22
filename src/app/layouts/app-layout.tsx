@@ -5,6 +5,8 @@ import { MOBILE_NAV_ITEMS, NAV_SECTIONS, type NavItem } from '@/app/navigation'
 import { useAuth } from '@/app/providers/auth-provider'
 import { Logo } from '@/components/logo'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { NotificationsBell } from '@/features/notifications/notifications-bell'
+import { useReminderGeneration } from '@/features/notifications/hooks'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -145,6 +147,8 @@ function MobileBottomNav() {
 
 export function AppLayout() {
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false)
+  // Synthesizes today's assignment/exam reminders once per session.
+  useReminderGeneration()
 
   return (
     <div className="min-h-dvh">
@@ -190,6 +194,7 @@ export function AppLayout() {
           </NavLink>
 
           <div className="ml-auto flex items-center gap-1.5">
+            <NotificationsBell />
             <ThemeToggle />
             <UserMenu />
           </div>

@@ -13,6 +13,7 @@ import { useAssignments, useModules } from '@/features/assignments/hooks'
 import { ModulesDialog } from '@/features/assignments/modules-dialog'
 import { PLANS } from '@/lib/plans'
 import { isActiveAssignment } from '@/services/assignments-service'
+import { rankAssignments } from '@/services/priority-engine'
 import type { Assignment } from '@/types/models'
 
 type FilterTab = 'active' | 'done' | 'all'
@@ -38,12 +39,32 @@ export function AssignmentsPage() {
   const activeCount = (assignments ?? []).filter(isActiveAssignment).length
   const atLimit = limit !== null && activeCount >= limit
 
+  const smartOrdering = PLANS[plan].limits.smartPrioritization
+
+  const scoreById = React.useMemo(() => {
+    if (!smartOrdering) return new Map<string, ReturnType<typeof rankAssignments>[number]['priority_score']>()
+    return new Map(
+      rankAssignments((assignments ?? []).filter(isActiveAssignment)).map((scored) => [
+        scored.id,
+        scored.priority_score,
+      ]),
+    )
+  }, [assignments, smartOrdering])
+
   const visible = React.useMemo(() => {
     const list = assignments ?? []
-    if (filter === 'active') return list.filter(isActiveAssignment)
-    if (filter === 'done') return list.filter((a) => !isActiveAssignment(a))
-    return list
-  }, [assignments, filter])
+    let filtered: Assignment[]
+    if (filter === 'active') filtered = list.filter(isActiveAssignment)
+    else if (filter === 'done') filtered = list.filter((a) => !isActiveAssignment(a))
+    else filtered = list
+    if (smartOrdering && filter === 'active') {
+      // Smart prioritization: highest-score first instead of plain due date.
+      filtered = [...filtered].sort(
+        (a, b) => (scoreById.get(b.id)?.score ?? 0) - (scoreById.get(a.id)?.score ?? 0),
+      )
+    }
+    return filtered
+  }, [assignments, filter, smartOrdering, scoreById])
 
   function openCreate() {
     if (atLimit) {
@@ -136,6 +157,7 @@ export function AssignmentsPage() {
                 assignment={assignment}
                 module={assignment.module_id ? moduleById.get(assignment.module_id) : undefined}
                 onEdit={openEdit}
+                score={scoreById.get(assignment.id)}
               />
             </li>
           ))}

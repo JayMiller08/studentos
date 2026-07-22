@@ -1,10 +1,13 @@
 import {
+  BarChart3,
   BookOpen,
+  Bot,
   CalendarDays,
   LayoutDashboard,
   ListTodo,
   type LucideIcon,
   Settings,
+  Sparkles,
   Timer,
 } from 'lucide-react'
 
@@ -37,6 +40,14 @@ export const NAV_SECTIONS: NavSection[] = [
       { to: '/app/assignments', label: 'Assignments', icon: BookOpen },
       { to: '/app/calendar', label: 'Calendar', icon: CalendarDays },
       { to: '/app/focus', label: 'Focus', icon: Timer },
+    ],
+  },
+  {
+    label: 'Intelligence',
+    items: [
+      { to: '/app/smart-plan', label: 'Smart Plan', icon: Sparkles },
+      { to: '/app/coach', label: 'AI Coach', icon: Bot },
+      { to: '/app/analytics', label: 'Analytics', icon: BarChart3 },
     ],
   },
   {

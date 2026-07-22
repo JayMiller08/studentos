@@ -20,10 +20,13 @@ function normalize(value: string | undefined): string | undefined {
 }
 
 function loadEnv(): Env {
+  // `window` is absent in unit tests / SSR-style tooling.
+  const origin =
+    typeof window === 'undefined' ? 'http://localhost:5173' : window.location.origin
   const parsed = EnvSchema.safeParse({
     supabaseUrl: normalize(import.meta.env.VITE_SUPABASE_URL),
     supabaseAnonKey: normalize(import.meta.env.VITE_SUPABASE_ANON_KEY),
-    appUrl: normalize(import.meta.env.VITE_APP_URL) ?? window.location.origin,
+    appUrl: normalize(import.meta.env.VITE_APP_URL) ?? origin,
     appEnv: normalize(import.meta.env.VITE_APP_ENV) ?? (import.meta.env.DEV ? 'development' : 'production'),
   })
 

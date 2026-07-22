@@ -14,6 +14,7 @@ import { Progress } from '@/components/ui/progress'
 import { ModuleBadge } from '@/features/assignments/module-badge'
 import { useDeleteAssignment, useUpdateAssignment } from '@/features/assignments/hooks'
 import { isOverdue } from '@/services/assignments-service'
+import type { PriorityScore } from '@/services/priority-engine'
 import { cn, formatDueDistance, formatMinutes } from '@/lib/utils'
 import type { Assignment, Module, Priority } from '@/types/models'
 
@@ -31,13 +32,22 @@ const STATUS_LABEL: Record<Assignment['status'], string> = {
   graded: 'Graded',
 }
 
+const BAND_VARIANT: Record<PriorityScore['band'], 'destructive' | 'warning' | 'secondary' | 'muted'> = {
+  critical: 'destructive',
+  high: 'warning',
+  medium: 'secondary',
+  low: 'muted',
+}
+
 interface AssignmentCardProps {
   assignment: Assignment
   module: Module | undefined
   onEdit: (assignment: Assignment) => void
+  /** Present when the user's plan includes smart prioritization. */
+  score?: PriorityScore
 }
 
-export function AssignmentCard({ assignment, module, onEdit }: AssignmentCardProps) {
+export function AssignmentCard({ assignment, module, onEdit, score }: AssignmentCardProps) {
   const updateAssignment = useUpdateAssignment()
   const deleteAssignment = useDeleteAssignment()
   const overdue = isOverdue(assignment)
@@ -49,6 +59,11 @@ export function AssignmentCard({ assignment, module, onEdit }: AssignmentCardPro
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <ModuleBadge module={module} />
+            {score && !done ? (
+              <Badge variant={BAND_VARIANT[score.band]} title={score.reason}>
+                ⚡ {score.score}
+              </Badge>
+            ) : null}
             <Badge variant={PRIORITY_VARIANT[assignment.priority]} className="capitalize">
               {assignment.priority}
             </Badge>

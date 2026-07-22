@@ -139,6 +139,27 @@ export const router = createBrowserRouter([
         },
       },
       {
+        path: 'smart-plan',
+        lazy: async () => {
+          const { SmartPlanPage } = await import('@/features/ai/smart-plan-page')
+          return { element: <SmartPlanPage /> }
+        },
+      },
+      {
+        path: 'coach',
+        lazy: async () => {
+          const { CoachPage } = await import('@/features/ai/coach-page')
+          return { element: <CoachPage /> }
+        },
+      },
+      {
+        path: 'analytics',
+        lazy: async () => {
+          const { AnalyticsPage } = await import('@/features/analytics/analytics-page')
+          return { element: <AnalyticsPage /> }
+        },
+      },
+      {
         path: 'settings',
         lazy: async () => {
           const { SettingsPage } = await import('@/features/settings/settings-page')

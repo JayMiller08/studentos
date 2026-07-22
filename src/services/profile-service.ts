@@ -45,7 +45,8 @@ export const profileService = {
       timezone: defaultTimezone(),
       goals: [],
       role: 'student',
-      plan: 'free',
+      // Demo mode showcases the full product (Pro); real accounts start Free.
+      plan: isSupabaseConfigured ? 'free' : 'pro',
       xp: 0,
       level: 1,
       current_streak: 0,

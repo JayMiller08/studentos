@@ -264,6 +264,19 @@ function NotificationsTab() {
     await updateProfile({ notification_prefs: { ...prefs, [key]: value } })
   }
 
+  async function togglePush(enabled: boolean) {
+    if (!prefs) return
+    if (enabled && typeof Notification !== 'undefined') {
+      const permission = await Notification.requestPermission()
+      if (permission !== 'granted') {
+        toast.error('Browser notifications were blocked — enable them in your browser settings.')
+        return
+      }
+    }
+    await updateProfile({ notification_prefs: { ...prefs, push_enabled: enabled } })
+    if (enabled) toast.success('Browser notifications enabled')
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -271,6 +284,19 @@ function NotificationsTab() {
         <CardDescription>Choose what StudentOS reminds you about</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <Label htmlFor="pref-push">Browser notifications</Label>
+            <p className="text-muted-foreground mt-0.5 text-sm">
+              Show reminders on this device even while the tab is in the background
+            </p>
+          </div>
+          <Switch
+            id="pref-push"
+            checked={prefs?.push_enabled ?? false}
+            onCheckedChange={(checked) => void togglePush(checked)}
+          />
+        </div>
         {NOTIFICATION_OPTIONS.map((option) => (
           <div key={option.key} className="flex items-center justify-between gap-4">
             <div className="min-w-0">
