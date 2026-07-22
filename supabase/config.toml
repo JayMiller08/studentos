@@ -1,0 +1,19 @@
+# StudentOS Supabase project configuration.
+# `supabase link` then `supabase db push` / `supabase functions deploy`.
+
+project_id = "studentos"
+
+[functions.ai-chat]
+verify_jwt = true
+
+[functions.billing]
+verify_jwt = true
+
+[functions.stripe-webhook]
+# Stripe signs requests; JWT verification must be OFF for the webhook.
+verify_jwt = false
+
+[functions.send-reminders]
+verify_jwt = false
+# Daily at 06:00 UTC — generate assignment/exam reminders server-side.
+schedule = "0 6 * * *"

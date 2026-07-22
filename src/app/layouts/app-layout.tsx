@@ -1,7 +1,7 @@
 import { LogOut, Menu, Settings as SettingsIcon, User, Zap } from 'lucide-react'
 import * as React from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { MOBILE_NAV_ITEMS, NAV_SECTIONS, type NavItem } from '@/app/navigation'
+import { MOBILE_NAV_ITEMS, navSectionsForRole, type NavItem } from '@/app/navigation'
 import { useAuth } from '@/app/providers/auth-provider'
 import { Logo } from '@/components/logo'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -21,9 +21,11 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/s
 import { cn, getInitials } from '@/lib/utils'
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+  const { profile } = useAuth()
+  const sections = navSectionsForRole(profile?.role)
   return (
     <nav aria-label="Main navigation" className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-4">
-      {NAV_SECTIONS.map((section) => (
+      {sections.map((section) => (
         <div key={section.label ?? 'root'} className="flex flex-col gap-1">
           {section.label ? (
             <p className="text-muted-foreground px-3 pb-1 text-xs font-medium tracking-wide uppercase">

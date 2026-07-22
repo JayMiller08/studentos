@@ -278,15 +278,13 @@ export function OnboardingPage() {
                         <FormItem>
                           <FormLabel>Timezone</FormLabel>
                           <FormControl>
-                            <>
-                              <Input list="timezone-options" autoComplete="off" {...field} />
-                              <datalist id="timezone-options">
-                                {timezones.map((tz) => (
-                                  <option key={tz} value={tz} />
-                                ))}
-                              </datalist>
-                            </>
+                            <Input list="timezone-options" autoComplete="off" {...field} />
                           </FormControl>
+                          <datalist id="timezone-options">
+                            {timezones.map((tz) => (
+                              <option key={tz} value={tz} />
+                            ))}
+                          </datalist>
                           <FormDescription>Detected automatically — change if needed</FormDescription>
                           <FormMessage />
                         </FormItem>

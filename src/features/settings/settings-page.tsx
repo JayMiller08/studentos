@@ -167,15 +167,13 @@ function ProfileTab() {
                 <FormItem>
                   <FormLabel>Timezone</FormLabel>
                   <FormControl>
-                    <>
-                      <Input list="settings-timezones" autoComplete="off" {...field} />
-                      <datalist id="settings-timezones">
-                        {timezones.map((tz) => (
-                          <option key={tz} value={tz} />
-                        ))}
-                      </datalist>
-                    </>
+                    <Input list="settings-timezones" autoComplete="off" {...field} />
                   </FormControl>
+                  <datalist id="settings-timezones">
+                    {timezones.map((tz) => (
+                      <option key={tz} value={tz} />
+                    ))}
+                  </datalist>
                   <FormMessage />
                 </FormItem>
               )}

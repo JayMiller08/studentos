@@ -3,17 +3,20 @@ import {
   BookOpen,
   Bot,
   CalendarDays,
+  CreditCard,
   LayoutDashboard,
   ListTodo,
   type LucideIcon,
   NotebookPen,
   PiggyBank,
   Settings,
+  Shield,
   Sparkles,
   Timer,
   Trophy,
   Repeat,
 } from 'lucide-react'
+import type { Role } from '@/types/models'
 
 export interface NavItem {
   to: string
@@ -21,6 +24,8 @@ export interface NavItem {
   icon: LucideIcon
   /** Exact-match highlighting (for the index route). */
   end?: boolean
+  /** When set, the item only shows for this role. */
+  requiresRole?: Role
 }
 
 export interface NavSection {
@@ -65,9 +70,21 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: 'Account',
-    items: [{ to: '/app/settings', label: 'Settings', icon: Settings }],
+    items: [
+      { to: '/app/billing', label: 'Billing', icon: CreditCard },
+      { to: '/app/settings', label: 'Settings', icon: Settings },
+      { to: '/app/admin', label: 'Admin', icon: Shield, requiresRole: 'admin' },
+    ],
   },
 ]
+
+/** Filter nav sections by the current user's role, dropping empty sections. */
+export function navSectionsForRole(role: Role | undefined): NavSection[] {
+  return NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => !item.requiresRole || item.requiresRole === role),
+  })).filter((section) => section.items.length > 0)
+}
 
 /** Items pinned to the mobile bottom navigation (max 5 for thumb reach). */
 export const MOBILE_NAV_ITEMS: NavItem[] = [

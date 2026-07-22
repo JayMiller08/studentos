@@ -1,5 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
-import { RedirectIfAuthenticated, RequireAuth } from '@/app/guards'
+import { RedirectIfAuthenticated, RequireAdmin, RequireAuth } from '@/app/guards'
 import { AppLayout } from '@/app/layouts/app-layout'
 import { AuthLayout } from '@/app/layouts/auth-layout'
 import { NotFoundPage } from '@/app/pages/not-found-page'
@@ -9,8 +9,28 @@ import { NotFoundPage } from '@/app/pages/not-found-page'
  * its own chunk; the app shell stays tiny.
  */
 export const router = createBrowserRouter([
-  // Public landing page ships in Phase 5; until then the root forwards into the app.
-  { path: '/', element: <Navigate to="/app" replace /> },
+  {
+    path: '/',
+    lazy: async () => {
+      const { LandingPage } = await import('@/features/landing/landing-page')
+      return { element: <LandingPage /> }
+    },
+  },
+
+  // Demo-mode simulated checkout (never used when Stripe is configured).
+  {
+    path: '/checkout/mock',
+    lazy: async () => {
+      const { MockCheckoutPage } = await import('@/features/billing/mock-checkout-page')
+      return {
+        element: (
+          <RequireAuth>
+            <MockCheckoutPage />
+          </RequireAuth>
+        ),
+      }
+    },
+  },
 
   {
     path: '/auth',
@@ -185,6 +205,26 @@ export const router = createBrowserRouter([
         lazy: async () => {
           const { AchievementsPage } = await import('@/features/gamification/achievements-page')
           return { element: <AchievementsPage /> }
+        },
+      },
+      {
+        path: 'billing',
+        lazy: async () => {
+          const { BillingPage } = await import('@/features/billing/billing-page')
+          return { element: <BillingPage /> }
+        },
+      },
+      {
+        path: 'admin',
+        lazy: async () => {
+          const { AdminPage } = await import('@/features/admin/admin-page')
+          return {
+            element: (
+              <RequireAdmin>
+                <AdminPage />
+              </RequireAdmin>
+            ),
+          }
         },
       },
       {

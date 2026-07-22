@@ -44,8 +44,8 @@ export const profileService = {
       semester: null,
       timezone: defaultTimezone(),
       goals: [],
-      role: 'student',
-      // Demo mode showcases the full product (Pro); real accounts start Free.
+      // Demo mode showcases the full product, including the admin dashboard.
+      role: isSupabaseConfigured ? 'student' : 'admin',
       plan: isSupabaseConfigured ? 'free' : 'pro',
       xp: 0,
       level: 1,

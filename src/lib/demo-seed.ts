@@ -180,4 +180,28 @@ export function ensureDemoSeed(userId: string): void {
       '# Eigenvalues\n\n1. Solve `det(A − λI) = 0`\n2. For each λ, solve `(A − λI)v = 0`\n\n**Shortcuts**\n- Trace = sum of eigenvalues\n- Determinant = product of eigenvalues',
     tags: ['maths'], pinned: false, module_id: math.id,
   })
+
+  // A simulated Pro subscription so the billing page shows an active plan.
+  const periodEnd = addDays(now, 24)
+  localDb.insert('subscriptions', {
+    user_id: userId, plan: 'pro', status: 'active', provider: 'manual',
+    provider_customer_id: null, provider_subscription_id: 'mock_demo',
+    current_period_end: periodEnd.toISOString(), cancel_at_period_end: false,
+  })
+
+  // Admin-dashboard sample data (demo user is an admin).
+  localDb.insert('feature_flags', { key: 'ai_coach', enabled: true, description: 'AI study coach chat' })
+  localDb.insert('feature_flags', { key: 'leaderboards', enabled: false, description: 'Opt-in leaderboards (privacy-reviewed rollout)' })
+  localDb.insert('feature_flags', { key: 'career_tools', enabled: false, description: 'Student Elite career dashboard' })
+  localDb.insert('feature_flags', { key: 'push_reminders', enabled: true, description: 'Web push notification delivery' })
+  localDb.insert('announcements', {
+    title: 'Welcome to StudentOS 🎉', level: 'info',
+    body: 'Exam season is coming — try the Smart Plan to schedule your revision.',
+    published_at: now.toISOString(), expires_at: null,
+  })
+  localDb.insert('support_tickets', {
+    user_id: userId, subject: 'Can I sync with Google Calendar?',
+    body: 'Would love two-way sync with my Google Calendar so classes show up in both.',
+    status: 'open', admin_notes: null,
+  })
 }
