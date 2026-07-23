@@ -46,6 +46,47 @@ In the Supabase dashboard → Authentication:
 - Enable email confirmations if you want double-opt-in (the app handles the
   "verify your email" state).
 
+### Google sign-in (OAuth)
+
+The "Continue with Google" button on the login/register pages needs a Google
+OAuth client wired to Supabase. Two callback URLs are involved and people
+routinely mix them up:
+
+| URL | Where it goes | Set it in |
+|-----|---------------|-----------|
+| `https://<PROJECT_REF>.supabase.co/auth/v1/callback` | Google → **Supabase** | Google Cloud Console → Authorized redirect URIs |
+| `https://<your-app>/auth/callback` | Supabase → **your app** | Supabase → Auth → URL Configuration → Redirect URLs |
+
+**1. Google Cloud Console** (https://console.cloud.google.com):
+- Create/select a project.
+- **APIs & Services → OAuth consent screen**: choose *External*, set app name,
+  support email and developer email. While the app is in *Testing*, add each
+  tester's Google address under *Test users* (or *Publish* to allow anyone).
+- **APIs & Services → Credentials → Create credentials → OAuth client ID →
+  Web application**:
+  - *Authorized JavaScript origins*: `https://<your-app>` and, for local dev,
+    `http://localhost:5173`.
+  - *Authorized redirect URIs*: **exactly** `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
+    (copy the "Callback URL" shown on Supabase's Google provider page — this is
+    what fixes `Error 400: redirect_uri_mismatch`).
+  - Copy the **Client ID** and **Client Secret**.
+
+**2. Supabase** → **Authentication → Providers → Google**: toggle on, paste the
+Client ID and Client Secret, save.
+
+**3. Supabase** → **Authentication → URL Configuration**: ensure **Site URL** is
+`https://<your-app>` and the **Redirect URLs** allow-list includes
+`https://<your-app>/auth/callback` (plus `http://localhost:5173/auth/callback`
+for dev). Supabase only redirects back to allow-listed URLs.
+
+**4. Vercel**: set `VITE_APP_URL` to the deployment's own URL per environment so
+`redirectTo` resolves to the right `/auth/callback`.
+
+Flow: app → Supabase → Google → `…supabase.co/auth/v1/callback` → your
+`/auth/callback` (PKCE code exchanged automatically) → `/app`. First-time users
+get a profile row from the `handle_new_user` trigger (name comes from Google's
+`full_name`) and are routed through onboarding.
+
 ## 3. Secrets & edge functions
 
 ```bash
