@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { OAuthButtons } from '@/features/auth/oauth-buttons'
 import { registerSchema, type RegisterValues } from '@/features/auth/schemas'
 
 function passwordStrength(password: string): { score: 0 | 1 | 2 | 3; label: string } {
@@ -163,6 +164,8 @@ export function RegisterPage() {
             </Button>
           </form>
         </Form>
+
+        <OAuthButtons />
 
         <p className="text-muted-foreground mt-6 text-center text-sm">
           Already have an account?{' '}

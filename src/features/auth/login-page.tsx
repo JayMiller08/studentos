@@ -16,6 +16,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { OAuthButtons } from '@/features/auth/oauth-buttons'
 import { loginSchema, type LoginValues } from '@/features/auth/schemas'
 
 export function LoginPage() {
@@ -119,6 +120,8 @@ export function LoginPage() {
             </Button>
           </form>
         </Form>
+
+        <OAuthButtons />
 
         <p className="text-muted-foreground mt-6 text-center text-sm">
           New to StudentOS?{' '}

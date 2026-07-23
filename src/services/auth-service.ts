@@ -110,6 +110,30 @@ export const authService = {
     return { needsVerification: !data.session }
   },
 
+  /**
+   * Start the Google OAuth flow. Redirects the browser to Google and back to
+   * `/auth/callback`, where the PKCE code is exchanged for a session. Not
+   * available in demo mode (there is no backend to broker the exchange).
+   */
+  async signInWithGoogle(): Promise<void> {
+    if (!supabase) {
+      throw new Error(
+        'Google sign-in needs a connected backend. In local demo mode, use an email and password instead.',
+      )
+    }
+    // OAuth sessions should persist across restarts.
+    setRememberMe(true)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${redirectBase}/auth/callback`,
+        queryParams: { prompt: 'select_account' },
+      },
+    })
+    // On success the browser navigates away; only errors return here.
+    if (error) throw new Error(error.message)
+  },
+
   async signOut(): Promise<void> {
     if (!supabase) {
       writeDemoUser(null)
