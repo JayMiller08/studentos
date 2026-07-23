@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { SA_INSTITUTIONS } from '@/lib/institutions'
 import { cn } from '@/lib/utils'
 import type { NotificationPrefs } from '@/types/models'
 
@@ -115,10 +116,21 @@ function ProfileTab() {
               name="university"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>University</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
+                  <FormLabel>Institution</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select your institution" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {SA_INSTITUTIONS.map((name) => (
+                        <SelectItem key={name} value={name}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -149,11 +161,8 @@ function ProfileTab() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                        <SelectItem key={n} value={String(n)}>
-                          Semester {n}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="1">Semester 1</SelectItem>
+                      <SelectItem value="2">Semester 2</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -21,7 +21,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { PLAN_ORDER, PLANS } from '@/lib/plans'
+import { formatPlanPrice, PLAN_ORDER, PLANS } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 
 const FEATURES = [
@@ -285,10 +285,8 @@ function Pricing() {
                   <h3 className="text-lg font-semibold">{plan.name}</h3>
                   <p className="text-muted-foreground text-sm">{plan.tagline}</p>
                   <div className="mt-3 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold">
-                      {plan.monthlyPriceUsd === 0 ? 'Free' : `$${plan.monthlyPriceUsd}`}
-                    </span>
-                    {plan.monthlyPriceUsd > 0 ? <span className="text-muted-foreground text-sm">/mo</span> : null}
+                    <span className="text-3xl font-bold">{formatPlanPrice(plan.monthlyPrice)}</span>
+                    {plan.monthlyPrice > 0 ? <span className="text-muted-foreground text-sm">/mo</span> : null}
                   </div>
                   <ul className="mt-5 mb-6 flex-1 space-y-2.5">
                     {plan.features.map((feature) => (

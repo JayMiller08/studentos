@@ -1,3 +1,4 @@
+import { PLANS } from '@/lib/plans'
 import { table } from '@/services/db'
 import type {
   Announcement,
@@ -23,7 +24,8 @@ export interface AdminMetrics {
   byPlan: Record<Plan, number>
   onboarded: number
   admins: number
-  mrrUsd: number
+  /** Monthly recurring revenue in ZAR. */
+  mrr: number
 }
 
 export const adminService = {
@@ -41,8 +43,8 @@ export const adminService = {
       if (user.onboarding_completed) onboarded += 1
       if (user.role === 'admin') admins += 1
     }
-    const mrrUsd = byPlan.pro * 4.99 + byPlan.elite * 9.99
-    return { totalUsers: users.length, byPlan, onboarded, admins, mrrUsd }
+    const mrr = byPlan.pro * PLANS.pro.monthlyPrice + byPlan.elite * PLANS.elite.monthlyPrice
+    return { totalUsers: users.length, byPlan, onboarded, admins, mrr }
   },
 
   async setUserPlan(userId: string, plan: Plan): Promise<void> {

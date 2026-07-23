@@ -24,17 +24,32 @@ export class StripeProvider implements BillingProvider {
     const token = sessionData.session?.access_token
     if (!token) throw new Error('You need to be signed in to manage billing.')
 
-    const response = await fetch(`${env.supabaseUrl}/functions/v1/billing`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ action, ...payload }),
-    })
+    let response: Response
+    try {
+      response = await fetch(`${env.supabaseUrl}/functions/v1/billing`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action, ...payload }),
+      })
+    } catch {
+      // Network error / function unreachable (fetch rejects before a response).
+      throw new Error(
+        "Couldn't reach the payment service. Please check your connection and try again.",
+      )
+    }
+
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: string } | null
-      throw new Error(body?.error ?? `Billing request failed (${response.status})`)
+      // 404 = function not deployed; 503 = deployed but Stripe keys missing.
+      if (response.status === 404 || response.status === 503) {
+        throw new Error(
+          body?.error ?? 'Payments are not enabled on this deployment yet. Please try again later.',
+        )
+      }
+      throw new Error(body?.error ?? `Billing request failed (${response.status}).`)
     }
     return (await response.json()) as T
   }

@@ -84,7 +84,7 @@ export const budgetService = {
     return budgets().insert({
       user_id: userId,
       month,
-      currency: 'USD',
+      currency: 'ZAR',
       planned_income: 0,
       spending_limit: 0,
     })

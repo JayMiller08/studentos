@@ -78,7 +78,7 @@ const transactionSchema = z.object({
 })
 
 const settingsSchema = z.object({
-  currency: z.string().trim().length(3, '3-letter code, e.g. USD'),
+  currency: z.string().trim().length(3, '3-letter code, e.g. ZAR'),
   plannedIncome: numberField(z.number().min(0).max(10_000_000)),
   spendingLimit: numberField(z.number().min(0).max(10_000_000)),
 })
@@ -118,7 +118,7 @@ export function BudgetPage() {
   const budget = budgetQuery.data
   const transactions = transactionsQuery.data ?? []
   const goals = goalsQuery.data ?? []
-  const currency = budget?.currency ?? 'USD'
+  const currency = budget?.currency ?? 'ZAR'
 
   const summary = React.useMemo(
     () => (budget ? summarize(budget, transactions) : null),
@@ -653,7 +653,7 @@ function BudgetSettingsDialog({
                 <FormItem>
                   <FormLabel>Currency</FormLabel>
                   <FormControl>
-                    <Input maxLength={3} placeholder="USD" {...field} />
+                    <Input maxLength={3} placeholder="ZAR" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

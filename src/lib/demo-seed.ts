@@ -141,19 +141,19 @@ export function ensureDemoSeed(userId: string): void {
     }
   })
 
-  // Budget for the current month.
+  // Budget for the current month (ZAR).
   const monthKey = `${today.slice(0, 7)}-01`
   localDb.insert('budgets', {
-    user_id: userId, month: monthKey, currency: 'USD',
-    planned_income: 850, spending_limit: 700,
+    user_id: userId, month: monthKey, currency: 'ZAR',
+    planned_income: 6500, spending_limit: 5200,
   })
   const spend = [
-    { type: 'income', amount: 850, category: 'other', note: 'Allowance + part-time job', daysAgo: 20 },
-    { type: 'expense', amount: 320, category: 'housing', note: 'Res fees portion', daysAgo: 18 },
-    { type: 'expense', amount: 86.5, category: 'food', note: 'Groceries', daysAgo: 6 },
-    { type: 'expense', amount: 45, category: 'transport', note: 'Bus card top-up', daysAgo: 5 },
-    { type: 'expense', amount: 60, category: 'books', note: 'Second-hand textbook', daysAgo: 3 },
-    { type: 'expense', amount: 25, category: 'entertainment', note: 'Movie night', daysAgo: 1 },
+    { type: 'income', amount: 6500, category: 'other', note: 'NSFAS allowance + part-time job', daysAgo: 20 },
+    { type: 'expense', amount: 2400, category: 'housing', note: 'Res fees portion', daysAgo: 18 },
+    { type: 'expense', amount: 865, category: 'food', note: 'Groceries', daysAgo: 6 },
+    { type: 'expense', amount: 420, category: 'transport', note: 'Taxi & bus fare', daysAgo: 5 },
+    { type: 'expense', amount: 550, category: 'books', note: 'Second-hand textbook', daysAgo: 3 },
+    { type: 'expense', amount: 190, category: 'entertainment', note: 'Movie night', daysAgo: 1 },
   ] as const
   for (const item of spend) {
     localDb.insert('transactions', {
@@ -162,7 +162,7 @@ export function ensureDemoSeed(userId: string): void {
     })
   }
   localDb.insert('goals', {
-    user_id: userId, name: 'New laptop fund', target_amount: 1200, saved_amount: 340,
+    user_id: userId, name: 'New laptop fund', target_amount: 15000, saved_amount: 4200,
     deadline: toDateKey(addDays(now, 120)), achieved_at: null,
   })
 

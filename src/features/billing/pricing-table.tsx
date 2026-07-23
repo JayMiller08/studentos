@@ -2,7 +2,7 @@ import { Check, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { PLAN_ORDER, PLANS } from '@/lib/plans'
+import { formatPlanPrice, PLAN_ORDER, PLANS } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 import type { Plan } from '@/types/models'
 
@@ -42,10 +42,8 @@ export function PricingTable({ currentPlan, onSelect, busyPlan, ctaLabel }: Pric
                 <p className="text-muted-foreground text-sm">{plan.tagline}</p>
               </div>
               <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-3xl font-bold">
-                  {plan.monthlyPriceUsd === 0 ? 'Free' : `$${plan.monthlyPriceUsd}`}
-                </span>
-                {plan.monthlyPriceUsd > 0 ? (
+                <span className="text-3xl font-bold">{formatPlanPrice(plan.monthlyPrice)}</span>
+                {plan.monthlyPrice > 0 ? (
                   <span className="text-muted-foreground text-sm">/month</span>
                 ) : null}
               </div>

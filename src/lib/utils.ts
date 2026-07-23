@@ -26,7 +26,7 @@ export function formatMinutes(totalMinutes: number): string {
   return `${h}h ${m}m`
 }
 
-export function formatCurrency(amount: number, currency = 'USD'): string {
+export function formatCurrency(amount: number, currency = 'ZAR'): string {
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency,

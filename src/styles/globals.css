@@ -12,6 +12,9 @@
 :root {
   --radius: 0.75rem;
 
+  /* App backdrop: soft white → blue wash (light mode). */
+  --app-gradient: linear-gradient(160deg, #ffffff 0%, #eff5ff 42%, #d9e7fb 100%);
+
   --background: oklch(0.984 0.003 247.858);
   --foreground: oklch(0.208 0.042 265.755);
   --card: oklch(1 0 0);
@@ -56,6 +59,9 @@
 }
 
 .dark {
+  /* App backdrop: deep navy → lighter blue wash (dark mode). */
+  --app-gradient: linear-gradient(160deg, #070d1c 0%, #0e1c3a 55%, #1b3a68 100%);
+
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.968 0.007 247.896);
   --card: oklch(0.183 0.041 265.4);
@@ -160,6 +166,18 @@
     @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: 'cv11', 'ss01';
     text-rendering: optimizeLegibility;
+  }
+
+  /* Soft white→blue (light) / navy→blue (dark) wash behind the app.
+     A fixed pseudo-element is used instead of background-attachment:fixed,
+     which is unreliable on iOS Safari. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--app-gradient);
+    pointer-events: none;
   }
 
   /* Subtle, consistent scrollbars on desktop */

@@ -5,7 +5,7 @@ import { useAuth } from '@/app/providers/auth-provider'
 import { Logo } from '@/components/logo'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { PLANS } from '@/lib/plans'
+import { formatPlanPrice, PLANS } from '@/lib/plans'
 import { billingService } from '@/services/billing/billing-service'
 import type { Plan } from '@/types/models'
 
@@ -53,7 +53,7 @@ export function MockCheckoutPage() {
               <p className="font-medium">{planDef.name}</p>
               <p className="text-muted-foreground text-sm">Billed monthly · cancel anytime</p>
             </div>
-            <p className="text-xl font-bold">${planDef.monthlyPriceUsd}</p>
+            <p className="text-xl font-bold">{formatPlanPrice(planDef.monthlyPrice)}</p>
           </div>
 
           {/* Inert fields — visual only; the demo never collects card data. */}
@@ -67,7 +67,7 @@ export function MockCheckoutPage() {
 
           <Button className="w-full" onClick={() => void pay()} disabled={processing}>
             {processing ? <Loader2 className="animate-spin" /> : <CreditCard />}
-            Pay ${planDef.monthlyPriceUsd} &amp; activate
+            Pay {formatPlanPrice(planDef.monthlyPrice)} &amp; activate
           </Button>
           <Button
             variant="ghost"

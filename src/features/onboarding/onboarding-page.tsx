@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { SA_INSTITUTIONS } from '@/lib/institutions'
 import { cn } from '@/lib/utils'
 
 const GOAL_OPTIONS = [
@@ -202,10 +203,21 @@ export function OnboardingPage() {
                       name="university"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>University or school</FormLabel>
-                          <FormControl>
-                            <Input placeholder="University of Cape Town" {...field} />
-                          </FormControl>
+                          <FormLabel>Institution</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select your institution" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {SA_INSTITUTIONS.map((name) => (
+                                <SelectItem key={name} value={name}>
+                                  {name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormDescription>Optional</FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -260,11 +272,8 @@ export function OnboardingPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                                <SelectItem key={n} value={String(n)}>
-                                  Semester {n}
-                                </SelectItem>
-                              ))}
+                              <SelectItem value="1">Semester 1</SelectItem>
+                              <SelectItem value="2">Semester 2</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />

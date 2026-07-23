@@ -13,9 +13,19 @@ export interface PlanDefinition {
   id: Plan
   name: string
   tagline: string
-  monthlyPriceUsd: number
+  /** Monthly price in South African Rand (ZAR). */
+  monthlyPrice: number
   limits: PlanLimits
   features: string[]
+}
+
+/** Currency the plans are priced and billed in. */
+export const PLAN_CURRENCY = 'ZAR' as const
+export const PLAN_CURRENCY_SYMBOL = 'R' as const
+
+/** Display a plan's price, e.g. "Free" or "R49". */
+export function formatPlanPrice(price: number): string {
+  return price === 0 ? 'Free' : `${PLAN_CURRENCY_SYMBOL}${price}`
 }
 
 export const PLAN_ORDER: readonly Plan[] = ['free', 'pro', 'elite']
@@ -25,7 +35,7 @@ export const PLANS: Record<Plan, PlanDefinition> = {
     id: 'free',
     name: 'Free',
     tagline: 'Everything you need to get organized.',
-    monthlyPriceUsd: 0,
+    monthlyPrice: 0,
     limits: {
       assignments: 3,
       aiCoach: false,
@@ -46,7 +56,7 @@ export const PLANS: Record<Plan, PlanDefinition> = {
     id: 'pro',
     name: 'Student Pro',
     tagline: 'Your AI-powered study copilot.',
-    monthlyPriceUsd: 4.99,
+    monthlyPrice: 49,
     limits: {
       assignments: null,
       aiCoach: true,
@@ -67,7 +77,7 @@ export const PLANS: Record<Plan, PlanDefinition> = {
     id: 'elite',
     name: 'Student Elite',
     tagline: 'From campus to career.',
-    monthlyPriceUsd: 9.99,
+    monthlyPrice: 99,
     limits: {
       assignments: null,
       aiCoach: true,

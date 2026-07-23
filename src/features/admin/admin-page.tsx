@@ -42,7 +42,7 @@ function MetricsRow() {
     {
       icon: DollarSign,
       label: 'Est. MRR',
-      value: metrics ? formatCurrency(metrics.mrrUsd) : '—',
+      value: metrics ? formatCurrency(metrics.mrr) : '—',
     },
     {
       icon: Flag,
