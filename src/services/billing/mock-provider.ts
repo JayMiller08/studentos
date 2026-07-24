@@ -14,6 +14,7 @@ import type {
  */
 export class MockProvider implements BillingProvider {
   readonly id = 'mock' as const
+  readonly available = true
 
   async createCheckout(request: CheckoutRequest): Promise<CheckoutSession> {
     await sleep(200)

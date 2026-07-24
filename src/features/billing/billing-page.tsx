@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
-import { CreditCard, ExternalLink, Loader2, ShieldCheck } from 'lucide-react'
+import { Clock, CreditCard, ExternalLink, Loader2, ShieldCheck } from 'lucide-react'
 import * as React from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -34,6 +34,8 @@ export function BillingPage() {
   })
 
   const currentPlan = profile?.plan ?? 'free'
+  // Paystack approval is pending, so real checkout isn't live yet in production.
+  const checkoutAvailable = billingService.checkoutAvailable
 
   // Surface the checkout redirect result once.
   React.useEffect(() => {
@@ -49,6 +51,10 @@ export function BillingPage() {
 
   async function handleSelect(plan: Plan) {
     if (plan === 'free' || plan === currentPlan) return
+    if (!checkoutAvailable) {
+      toast('Paid plans are launching soon — hang tight!')
+      return
+    }
     setBusyPlan(plan)
     try {
       await billingService.startCheckout(plan)
@@ -83,6 +89,22 @@ export function BillingPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Billing & plans" description="Manage your StudentOS subscription" />
+
+      {!checkoutAvailable && !isDemo ? (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex items-start gap-3 pt-1">
+            <Clock aria-hidden className="text-primary mt-0.5 size-5 shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium">Paid plans are launching soon</p>
+              <p className="text-muted-foreground">
+                We&rsquo;re setting up secure card payments with Paystack. Browse the plans below —
+                you&rsquo;ll be able to upgrade here as soon as it&rsquo;s live. Everything on the
+                Free plan stays free.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Current plan */}
       <Card>
@@ -122,8 +144,10 @@ export function BillingPage() {
         currentPlan={currentPlan}
         onSelect={(selected) => void handleSelect(selected)}
         busyPlan={busyPlan}
+        lockPaidPlans={!checkoutAvailable}
         ctaLabel={(planId) => {
           if (planId === currentPlan) return 'Current plan'
+          if (!checkoutAvailable && planId !== 'free') return 'Coming soon'
           const order = { free: 0, pro: 1, elite: 2 }
           return order[planId] > order[currentPlan] ? `Upgrade to ${PLANS[planId].name}` : `Switch to ${PLANS[planId].name}`
         }}
@@ -136,8 +160,8 @@ export function BillingPage() {
             <p className="font-medium">Secure billing</p>
             <p className="text-muted-foreground">
               {isDemo
-                ? 'Demo mode simulates checkout — no real payment is taken. Connect Stripe to accept live payments.'
-                : 'Payments are processed securely by Stripe. StudentOS never sees your card details. Cancel any time.'}
+                ? 'Demo mode simulates checkout — no real payment is taken.'
+                : 'Payments will be processed securely by Paystack. StudentOS never sees your card details, and you can cancel any time.'}
             </p>
           </div>
         </CardContent>

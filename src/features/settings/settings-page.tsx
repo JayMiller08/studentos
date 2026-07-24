@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2, Monitor, Moon, Sun } from 'lucide-react'
+import { Compass, Loader2, Monitor, Moon, Sun } from 'lucide-react'
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { useAuth } from '@/app/providers/auth-provider'
@@ -203,6 +204,7 @@ function ProfileTab() {
 function AppearanceTab() {
   const { theme, setTheme } = useTheme()
   const { profile, updateProfile } = useAuth()
+  const navigate = useNavigate()
 
   const options = [
     { value: 'light' as const, label: 'Light', icon: Sun },
@@ -256,6 +258,24 @@ function AppearanceTab() {
               <SelectItem value="en">English</SelectItem>
             </SelectContent>
           </Select>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Product tour</CardTitle>
+          <CardDescription>Take the quick walkthrough of the app again</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              await updateProfile({ tour_completed: false })
+              navigate('/app')
+            }}
+          >
+            <Compass /> Replay tour
+          </Button>
         </CardContent>
       </Card>
     </div>

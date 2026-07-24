@@ -17,6 +17,7 @@ import type {
  */
 export class StripeProvider implements BillingProvider {
   readonly id = 'stripe' as const
+  readonly available = true
 
   private async invoke<T>(action: string, payload: Record<string, unknown>): Promise<T> {
     const supabase = requireSupabase()

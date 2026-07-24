@@ -63,6 +63,7 @@ export interface Profile extends BaseRow {
   longest_streak: number
   last_active_date: string | null
   onboarding_completed: boolean
+  tour_completed: boolean
   notification_prefs: NotificationPrefs
   language: string
 }

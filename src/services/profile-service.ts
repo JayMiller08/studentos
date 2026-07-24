@@ -53,6 +53,7 @@ export const profileService = {
       longest_streak: 0,
       last_active_date: null,
       onboarding_completed: false,
+      tour_completed: false,
       notification_prefs: DEFAULT_NOTIFICATION_PREFS,
       language: 'en',
     })

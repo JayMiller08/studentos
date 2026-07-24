@@ -26,7 +26,10 @@ export interface PortalSession {
 }
 
 export interface BillingProvider {
-  readonly id: 'stripe' | 'mock'
+  readonly id: 'stripe' | 'paystack' | 'mock'
+  /** Whether checkout is live. When false the UI shows a "coming soon" state
+   * instead of attempting a charge. */
+  readonly available: boolean
   /** Create a hosted checkout session for a plan upgrade. */
   createCheckout(request: CheckoutRequest): Promise<CheckoutSession>
   /** Create a customer portal session for managing an existing subscription. */

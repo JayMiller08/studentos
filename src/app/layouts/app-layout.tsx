@@ -7,6 +7,8 @@ import { Logo } from '@/components/logo'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { NotificationsBell } from '@/features/notifications/notifications-bell'
 import { useReminderGeneration } from '@/features/notifications/hooks'
+import { InstallBanner } from '@/features/pwa/install-banner'
+import { ProductTour } from '@/features/tour/product-tour'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -136,6 +138,7 @@ function DemoBanner() {
 function MobileBottomNav() {
   return (
     <nav
+      data-tour="mobile-nav"
       aria-label="Primary"
       className="bg-card/95 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur supports-[backdrop-filter]:bg-card/80 lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
@@ -177,7 +180,10 @@ export function AppLayout() {
       </a>
 
       {/* Desktop sidebar */}
-      <aside className="bg-sidebar fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r lg:flex">
+      <aside
+        data-tour="nav"
+        className="bg-sidebar fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r lg:flex"
+      >
         <div className="flex h-16 items-center border-b px-5">
           <NavLink to="/app" aria-label="StudentOS dashboard">
             <Logo />
@@ -210,7 +216,7 @@ export function AppLayout() {
             <Logo showWordmark={false} />
           </NavLink>
 
-          <div className="ml-auto flex items-center gap-1.5">
+          <div data-tour="topbar" className="ml-auto flex items-center gap-1.5">
             <LevelBadge />
             <NotificationsBell />
             <ThemeToggle />
@@ -227,6 +233,8 @@ export function AppLayout() {
       </div>
 
       <MobileBottomNav />
+      <InstallBanner />
+      <ProductTour />
     </div>
   )
 }

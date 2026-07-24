@@ -100,7 +100,10 @@ export function DashboardPage() {
       />
 
       {/* Priority hero — the answer to "what should I do right now?" */}
-      <Card className="from-primary/8 border-primary/25 bg-gradient-to-br to-transparent">
+      <Card
+        data-tour="priority"
+        className="from-primary/8 border-primary/25 bg-gradient-to-br to-transparent"
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Sparkles aria-hidden className="text-primary size-4" /> Today's priority
@@ -162,7 +165,7 @@ export function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {/* Today's tasks */}
-        <Card className="xl:row-span-2">
+        <Card data-tour="today" className="xl:row-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <ListTodo aria-hidden className="text-primary size-4" /> Today's tasks

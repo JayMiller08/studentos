@@ -13,10 +13,18 @@ interface PricingTableProps {
   onSelect: (plan: Plan) => void
   /** Disables buttons during an in-flight action. */
   busyPlan?: Plan | null
+  /** Disable the paid plan CTAs (e.g. while checkout isn't live yet). */
+  lockPaidPlans?: boolean
   ctaLabel?: (plan: Plan) => string
 }
 
-export function PricingTable({ currentPlan, onSelect, busyPlan, ctaLabel }: PricingTableProps) {
+export function PricingTable({
+  currentPlan,
+  onSelect,
+  busyPlan,
+  lockPaidPlans = false,
+  ctaLabel,
+}: PricingTableProps) {
   return (
     <div className="grid gap-5 lg:grid-cols-3">
       {PLAN_ORDER.map((planId) => {
@@ -60,7 +68,7 @@ export function PricingTable({ currentPlan, onSelect, busyPlan, ctaLabel }: Pric
               <Button
                 variant={highlighted ? 'default' : 'outline'}
                 className="w-full"
-                disabled={isCurrent || busyPlan === planId}
+                disabled={isCurrent || busyPlan === planId || (lockPaidPlans && planId !== 'free')}
                 onClick={() => onSelect(planId)}
               >
                 {isCurrent

@@ -2,21 +2,29 @@ import { isSupabaseConfigured } from '@/lib/env'
 import { byUser, table } from '@/services/db'
 import type { BillingProvider } from '@/services/billing/provider'
 import { MockProvider } from '@/services/billing/mock-provider'
-import { StripeProvider } from '@/services/billing/stripe-provider'
+import { PaystackProvider } from '@/services/billing/paystack-provider'
 import type { Plan, Subscription } from '@/types/models'
 
 /**
- * The single place where a concrete billing provider is chosen. Swapping
- * providers (or adding a regional one) happens here and nowhere else.
+ * The single place where a concrete billing provider is chosen.
+ * - Demo mode: MockProvider (simulated checkout, so the flow is showcaseable).
+ * - Production: Paystack (Stripe doesn't support South African businesses).
+ *   Paystack account approval is pending, so it reports `available: false` and
+ *   the UI shows a "coming soon" state. Swap in the live implementation here
+ *   once approved — nothing else changes.
  */
 export const billingProvider: BillingProvider = isSupabaseConfigured
-  ? new StripeProvider()
+  ? new PaystackProvider()
   : new MockProvider()
+
+/** Whether real checkout can run right now (drives the billing UI state). */
+export const isCheckoutAvailable = billingProvider.available
 
 const subscriptions = () => table<Subscription>('subscriptions')
 
 export const billingService = {
   provider: billingProvider,
+  checkoutAvailable: billingProvider.available,
 
   async getSubscription(userId: string): Promise<Subscription | null> {
     const rows = await subscriptions().list({
