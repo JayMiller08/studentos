@@ -9,6 +9,7 @@ import { NotificationsBell } from '@/features/notifications/notifications-bell'
 import { useReminderGeneration } from '@/features/notifications/hooks'
 import { InstallBanner } from '@/features/pwa/install-banner'
 import { ProductTour } from '@/features/tour/product-tour'
+import { CookieConsent } from '@/components/cookie-consent'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -235,6 +236,7 @@ export function AppLayout() {
       <MobileBottomNav />
       <InstallBanner />
       <ProductTour />
+      <CookieConsent />
     </div>
   )
 }

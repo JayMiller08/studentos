@@ -16,6 +16,20 @@ export const router = createBrowserRouter([
       return { element: <LandingPage /> }
     },
   },
+  {
+    path: '/privacy',
+    lazy: async () => {
+      const { PrivacyPage } = await import('@/features/landing/privacy-page')
+      return { element: <PrivacyPage /> }
+    },
+  },
+  {
+    path: '/terms',
+    lazy: async () => {
+      const { TermsPage } = await import('@/features/landing/terms-page')
+      return { element: <TermsPage /> }
+    },
+  },
 
   // Demo-mode simulated checkout (never used when Stripe is configured).
   {
