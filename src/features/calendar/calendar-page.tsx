@@ -229,7 +229,7 @@ export function CalendarPage() {
         }
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div data-tour="calendar-views" className="flex flex-wrap items-center justify-between gap-3">
         <Tabs value={view} onValueChange={(value) => setView(value as CalendarView)}>
           <TabsList>
             <TabsTrigger value="month">Month</TabsTrigger>
@@ -269,7 +269,7 @@ export function CalendarPage() {
 
       {view === 'month' ? (
         <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-          <Card className="py-3">
+          <Card data-tour="calendar-grid" className="py-3">
             <CardContent className="px-3">
               <div className="text-muted-foreground grid grid-cols-7 gap-1 pb-2 text-center text-xs font-medium">
                 {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label) => (

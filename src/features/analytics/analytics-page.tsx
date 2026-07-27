@@ -163,7 +163,7 @@ export function AnalyticsPage() {
     <div className="space-y-6">
       <PageHeader title="Analytics" description="Your study patterns, output and trends" />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div data-tour="analytics-stats" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           icon={Gauge}
           label="Productivity score"
@@ -185,7 +185,7 @@ export function AnalyticsPage() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div data-tour="analytics-charts" className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Daily focus — last 30 days</CardTitle>

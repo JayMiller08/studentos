@@ -204,7 +204,7 @@ export function FocusPage() {
       />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
-        <Card>
+        <Card data-tour="focus-timer">
           <CardHeader>
             <div className="flex items-center justify-between">
               <Tabs value={mode} onValueChange={(value) => setMode(value as 'pomodoro' | 'deep')}>
@@ -299,7 +299,7 @@ export function FocusPage() {
         </Card>
 
         <div className="space-y-4">
-          <Card>
+          <Card data-tour="focus-ambient">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 {ambient.kind === 'off' ? (
@@ -353,7 +353,7 @@ export function FocusPage() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div data-tour="focus-stats" className="grid grid-cols-2 gap-3">
             {statCards.map((stat) => (
               <Card key={stat.label} className="gap-1 py-4">
                 <CardContent className="space-y-1">

@@ -1,4 +1,5 @@
 import { isSupabaseConfigured } from '@/lib/env'
+import { withTourDefaults } from '@/lib/tours'
 import { table } from '@/services/db'
 import type { AuthUser } from '@/services/auth-service'
 import { DEFAULT_NOTIFICATION_PREFS, type Profile } from '@/types/models'
@@ -15,7 +16,8 @@ function defaultTimezone(): string {
 
 export const profileService = {
   async get(userId: string): Promise<Profile | null> {
-    return profiles().get(userId)
+    const profile = await profiles().get(userId)
+    return profile ? withTourDefaults(profile) : null
   },
 
   /**
@@ -25,7 +27,7 @@ export const profileService = {
    */
   async ensure(user: AuthUser): Promise<Profile> {
     const existing = await profiles().get(user.id)
-    if (existing) return existing
+    if (existing) return withTourDefaults(existing)
 
     // First demo sign-in: populate a believable sample workload so every
     // feature demonstrates real behavior instead of empty states.
@@ -54,12 +56,14 @@ export const profileService = {
       last_active_date: null,
       onboarding_completed: false,
       tour_completed: false,
+      tours_seen: [],
+      tour_replay_hint: false,
       notification_prefs: DEFAULT_NOTIFICATION_PREFS,
       language: 'en',
     })
   },
 
   async update(userId: string, patch: Partial<Profile>): Promise<Profile> {
-    return profiles().update(userId, patch)
+    return withTourDefaults(await profiles().update(userId, patch))
   },
 }

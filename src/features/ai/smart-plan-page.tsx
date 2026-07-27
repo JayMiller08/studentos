@@ -158,7 +158,7 @@ export function SmartPlanPage() {
         title="Smart planning is a Student Pro feature"
         description="Upgrade to generate day-by-day study schedules from your assignments, weighted by deadlines, grade impact and difficulty."
       >
-        <Card>
+        <Card data-tour="plan-settings">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Sparkles aria-hidden className="text-primary size-4" /> Plan settings

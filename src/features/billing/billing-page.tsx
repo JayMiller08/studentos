@@ -140,18 +140,20 @@ export function BillingPage() {
         </CardHeader>
       </Card>
 
-      <PricingTable
-        currentPlan={currentPlan}
-        onSelect={(selected) => void handleSelect(selected)}
-        busyPlan={busyPlan}
-        lockPaidPlans={!checkoutAvailable}
-        ctaLabel={(planId) => {
-          if (planId === currentPlan) return 'Current plan'
-          if (!checkoutAvailable && planId !== 'free') return 'Coming soon'
-          const order = { free: 0, pro: 1, elite: 2 }
-          return order[planId] > order[currentPlan] ? `Upgrade to ${PLANS[planId].name}` : `Switch to ${PLANS[planId].name}`
-        }}
-      />
+      <div data-tour="billing-plans">
+        <PricingTable
+          currentPlan={currentPlan}
+          onSelect={(selected) => void handleSelect(selected)}
+          busyPlan={busyPlan}
+          lockPaidPlans={!checkoutAvailable}
+          ctaLabel={(planId) => {
+            if (planId === currentPlan) return 'Current plan'
+            if (!checkoutAvailable && planId !== 'free') return 'Coming soon'
+            const order = { free: 0, pro: 1, elite: 2 }
+            return order[planId] > order[currentPlan] ? `Upgrade to ${PLANS[planId].name}` : `Switch to ${PLANS[planId].name}`
+          }}
+        />
+      </div>
 
       <Card className="bg-secondary/40">
         <CardContent className="flex items-start gap-3 pt-1">

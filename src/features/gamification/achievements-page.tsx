@@ -50,7 +50,10 @@ export function AchievementsPage() {
       <PageHeader title="Achievements" description="Level up as you build better study habits" />
 
       {/* Level hero */}
-      <Card className="from-primary/8 border-primary/25 bg-gradient-to-br to-transparent">
+      <Card
+        data-tour="level-hero"
+        className="from-primary/8 border-primary/25 bg-gradient-to-br to-transparent"
+      >
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="from-primary flex size-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br to-indigo-500 text-2xl font-bold text-white shadow-sm">
@@ -77,7 +80,7 @@ export function AchievementsPage() {
       </Card>
 
       {/* Badge grid */}
-      <Card>
+      <Card data-tour="badges">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Award aria-hidden className="text-primary size-4" /> Badges

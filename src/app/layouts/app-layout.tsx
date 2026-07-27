@@ -9,6 +9,8 @@ import { NotificationsBell } from '@/features/notifications/notifications-bell'
 import { useReminderGeneration } from '@/features/notifications/hooks'
 import { InstallBanner } from '@/features/pwa/install-banner'
 import { ProductTour } from '@/features/tour/product-tour'
+import { TourButton } from '@/features/tour/tour-button'
+import { TourProvider } from '@/features/tour/tour-provider'
 import { CookieConsent } from '@/components/cookie-consent'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -172,71 +174,79 @@ export function AppLayout() {
   useReminderGeneration()
 
   return (
-    <div className="min-h-dvh">
-      <a
-        href="#main-content"
-        className="bg-primary text-primary-foreground sr-only z-50 rounded-md px-3 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
-      >
-        Skip to content
-      </a>
-
-      {/* Desktop sidebar */}
-      <aside
-        data-tour="nav"
-        className="bg-sidebar fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r lg:flex"
-      >
-        <div className="flex h-16 items-center border-b px-5">
-          <NavLink to="/app" aria-label="StudentOS dashboard">
-            <Logo />
-          </NavLink>
-        </div>
-        <SidebarNav />
-      </aside>
-
-      <div className="flex min-h-dvh flex-col lg:pl-64">
-        <DemoBanner />
-
-        {/* Topbar */}
-        <header className="bg-background/95 sticky top-0 z-30 flex h-16 items-center gap-3 border-b px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6">
-          <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation">
-                <Menu />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0">
-              <SheetTitle className="sr-only">Navigation</SheetTitle>
-              <div className="flex h-16 items-center border-b px-5">
-                <Logo />
-              </div>
-              <SidebarNav onNavigate={() => setMobileNavOpen(false)} />
-            </SheetContent>
-          </Sheet>
-
-          <NavLink to="/app" className="lg:hidden" aria-label="StudentOS dashboard">
-            <Logo showWordmark={false} />
-          </NavLink>
-
-          <div data-tour="topbar" className="ml-auto flex items-center gap-1.5">
-            <LevelBadge />
-            <NotificationsBell />
-            <ThemeToggle />
-            <UserMenu />
-          </div>
-        </header>
-
-        <main
-          id="main-content"
-          className="mx-auto w-full max-w-7xl flex-1 px-4 pt-6 pb-24 md:px-6 lg:pb-10"
+    <TourProvider>
+      <div className="min-h-dvh">
+        <a
+          href="#main-content"
+          className="bg-primary text-primary-foreground sr-only z-50 rounded-md px-3 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
         >
-          <Outlet />
-        </main>
-      </div>
+          Skip to content
+        </a>
 
-      <MobileBottomNav />
-      <InstallBanner />
-      <ProductTour />
-      <CookieConsent />
-    </div>
+        {/* Desktop sidebar */}
+        <aside
+          data-tour="nav"
+          className="bg-sidebar fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r lg:flex"
+        >
+          <div className="flex h-16 items-center border-b px-5">
+            <NavLink to="/app" aria-label="StudentOS dashboard">
+              <Logo />
+            </NavLink>
+          </div>
+          <SidebarNav />
+        </aside>
+
+        <div className="flex min-h-dvh flex-col lg:pl-64">
+          <DemoBanner />
+
+          {/* Topbar */}
+          <header className="bg-background/95 sticky top-0 z-30 flex h-16 items-center gap-3 border-b px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6">
+            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="lg:hidden"
+                  aria-label="Open navigation"
+                >
+                  <Menu />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0">
+                <SheetTitle className="sr-only">Navigation</SheetTitle>
+                <div className="flex h-16 items-center border-b px-5">
+                  <Logo />
+                </div>
+                <SidebarNav onNavigate={() => setMobileNavOpen(false)} />
+              </SheetContent>
+            </Sheet>
+
+            <NavLink to="/app" className="lg:hidden" aria-label="StudentOS dashboard">
+              <Logo showWordmark={false} />
+            </NavLink>
+
+            <div data-tour="topbar" className="ml-auto flex items-center gap-1.5">
+              <LevelBadge />
+              <TourButton />
+              <NotificationsBell />
+              <ThemeToggle />
+              <UserMenu />
+            </div>
+          </header>
+
+          <main
+            id="main-content"
+            className="mx-auto w-full max-w-7xl flex-1 px-4 pt-6 pb-24 md:px-6 lg:pb-10"
+          >
+            <Outlet />
+          </main>
+        </div>
+
+        <MobileBottomNav />
+        <InstallBanner />
+        <ProductTour />
+        <CookieConsent />
+      </div>
+    </TourProvider>
   )
 }

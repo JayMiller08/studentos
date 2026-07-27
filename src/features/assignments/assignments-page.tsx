@@ -118,7 +118,11 @@ export function AssignmentsPage() {
         </Card>
       ) : null}
 
-      <Tabs value={filter} onValueChange={(value) => setFilter(value as FilterTab)}>
+      <Tabs
+        data-tour="assignment-filters"
+        value={filter}
+        onValueChange={(value) => setFilter(value as FilterTab)}
+      >
         <TabsList>
           <TabsTrigger value="active">Active</TabsTrigger>
           <TabsTrigger value="done">Completed</TabsTrigger>
@@ -150,7 +154,7 @@ export function AssignmentsPage() {
           }
         />
       ) : (
-        <ul className="space-y-3">
+        <ul data-tour="assignment-list" className="space-y-3">
           {visible.map((assignment) => (
             <li key={assignment.id}>
               <AssignmentCard

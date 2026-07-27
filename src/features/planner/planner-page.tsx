@@ -175,7 +175,7 @@ export function PlannerPage() {
         }
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div data-tour="planner-views" className="flex flex-wrap items-center justify-between gap-3">
         <Tabs value={view} onValueChange={(value) => setView(value as PlannerView)}>
           <TabsList>
             <TabsTrigger value="day">Day</TabsTrigger>
@@ -236,7 +236,7 @@ export function PlannerPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-tour="planner-backlog">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Inbox aria-hidden className="text-muted-foreground size-4" /> Backlog

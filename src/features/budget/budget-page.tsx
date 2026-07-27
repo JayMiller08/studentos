@@ -182,7 +182,7 @@ export function BudgetPage() {
         }
       />
 
-      <div className="flex items-center gap-1">
+      <div data-tour="budget-month" className="flex items-center gap-1">
         <Button variant="outline" size="icon-sm" aria-label="Previous month" onClick={() => setMonthAnchor(subMonths(monthAnchor, 1))}>
           <ChevronLeft />
         </Button>
@@ -197,7 +197,7 @@ export function BudgetPage() {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div data-tour="budget-summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {summaryCards.map((card) => (
           <Card key={card.label} className="gap-1 py-4">
             <CardContent className="space-y-1">

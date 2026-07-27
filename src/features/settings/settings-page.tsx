@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useTour } from '@/features/tour/tour-provider'
 import { GOAL_OPTIONS, MAX_GOALS } from '@/lib/goals'
 import { SA_INSTITUTIONS } from '@/lib/institutions'
 import { cn } from '@/lib/utils'
@@ -272,6 +273,7 @@ function GoalsCard() {
 function AppearanceTab() {
   const { theme, setTheme } = useTheme()
   const { profile, updateProfile } = useAuth()
+  const { resetAll } = useTour()
   const navigate = useNavigate()
 
   const options = [
@@ -331,18 +333,22 @@ function AppearanceTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Product tour</CardTitle>
-          <CardDescription>Take the quick walkthrough of the app again</CardDescription>
+          <CardTitle>Product tours</CardTitle>
+          <CardDescription>
+            Every page has a short walkthrough that plays the first time you open it. Replay the one
+            for the page you are on with the compass in the top bar — or start them all over.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Button
             variant="outline"
             onClick={async () => {
-              await updateProfile({ tour_completed: false })
+              await resetAll()
+              toast.success('Tours reset — each page will introduce itself again')
               navigate('/app')
             }}
           >
-            <Compass /> Replay tour
+            <Compass /> Reset all tours
           </Button>
         </CardContent>
       </Card>
@@ -415,7 +421,7 @@ export function SettingsPage() {
     <div className="space-y-6">
       <PageHeader title="Settings" description="Manage your profile, preferences and notifications" />
       <Tabs defaultValue="profile">
-        <TabsList className="w-full sm:w-auto">
+        <TabsList data-tour="settings-tabs" className="w-full sm:w-auto">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>

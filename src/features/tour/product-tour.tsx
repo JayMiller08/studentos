@@ -1,10 +1,8 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
-import { useLocation } from 'react-router-dom'
-import { useAuth } from '@/app/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { TOUR_STEPS } from '@/features/tour/tour-steps'
+import { useTour } from '@/features/tour/tour-provider'
 
 const SPOTLIGHT_PADDING = 8
 const TIP_WIDTH = 340
@@ -65,49 +63,16 @@ function positionTip(
 }
 
 export function ProductTour() {
-  const { profile, updateProfile } = useAuth()
-  const location = useLocation()
-  const [active, setActive] = React.useState(false)
-  const [stepIndex, setStepIndex] = React.useState(0)
+  const { activeTour, stepIndex, goTo, finish } = useTour()
   const [rect, setRect] = React.useState<Rect | null>(null)
   const [tipPos, setTipPos] = React.useState({ top: -9999, left: -9999, centered: true })
   const tipRef = React.useRef<HTMLDivElement | null>(null)
-  const startedRef = React.useRef(false)
 
-  const shouldShow =
-    Boolean(profile?.onboarding_completed) &&
-    profile?.tour_completed === false &&
-    location.pathname === '/app'
-
-  // Start once when eligible (small delay lets the dashboard mount).
-  // `startedRef` is only set when the timer fires, so a cleared timer (React
-  // StrictMode double-invoke, or a transient re-render) restarts cleanly.
-  React.useEffect(() => {
-    if (!shouldShow || startedRef.current) return
-    const timer = setTimeout(() => {
-      startedRef.current = true
-      setStepIndex(0)
-      setActive(true)
-    }, 450)
-    return () => clearTimeout(timer)
-  }, [shouldShow])
-
-  const finish = React.useCallback(() => {
-    setActive(false)
-    if (profile && !profile.tour_completed) void updateProfile({ tour_completed: true })
-  }, [profile, updateProfile])
-
-  // If the user leaves the dashboard while the tour is open, close it out.
-  React.useEffect(() => {
-    if (active && location.pathname !== '/app') finish()
-  }, [active, location.pathname, finish])
-
-  const step = TOUR_STEPS[stepIndex]
+  const step = activeTour?.steps[stepIndex]
 
   // Measure the current target and keep it in sync with scroll/resize.
   React.useEffect(() => {
-    if (!active || !step) return
-    let raf = 0
+    if (!step) return
     const measure = () => {
       const el = findTarget(step.target)
       if (el) {
@@ -119,29 +84,46 @@ export function ProductTour() {
     }
     const el = findTarget(step.target)
     if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' })
-    // Measure after the smooth scroll settles, then keep in sync.
-    raf = window.requestAnimationFrame(() => setTimeout(measure, 260))
+    // Draw immediately so the spotlight never lags the card, then re-measure
+    // once the smooth scroll settles. Timers rather than rAF: a tour opened in
+    // a background tab gets no animation frames, and would sit there unanchored
+    // until the next scroll or resize.
+    measure()
+    const settle = window.setTimeout(measure, 280)
     window.addEventListener('scroll', measure, true)
     window.addEventListener('resize', measure)
     return () => {
-      window.cancelAnimationFrame(raf)
+      window.clearTimeout(settle)
       window.removeEventListener('scroll', measure, true)
       window.removeEventListener('resize', measure)
     }
-  }, [active, step, stepIndex])
+  }, [step])
 
   // Position the tooltip once its real height is known.
   React.useLayoutEffect(() => {
-    if (!active) return
+    if (!step) return
     const height = tipRef.current?.offsetHeight ?? 180
     setTipPos(positionTip(rect, height))
-  }, [active, rect, stepIndex])
+  }, [step, rect])
 
-  if (!active || !step) return null
+  // Escape closes, like any other modal surface.
+  React.useEffect(() => {
+    if (!activeTour) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') finish()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [activeTour, finish])
 
-  const isLast = stepIndex === TOUR_STEPS.length - 1
+  if (!activeTour || !step) return null
+
+  const steps = activeTour.steps
+  const isLast = stepIndex === steps.length - 1
   const width = Math.min(TIP_WIDTH, window.innerWidth - 24)
 
+  // The label chip and heading below name the specific tour, so the dialog
+  // itself stays generic rather than announcing "Tours tour".
   return createPortal(
     <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Product tour">
       {/* Click-blocker + dim (dim only for centered steps; anchored uses the ring) */}
@@ -172,16 +154,22 @@ export function ProductTour() {
         className="bg-popover text-popover-foreground animate-in fade-in-0 zoom-in-95 absolute rounded-xl border p-4 shadow-xl duration-200"
         style={{ top: tipPos.top, left: tipPos.left, width }}
       >
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground font-mono text-[11px] tracking-wider tabular-nums">
-            {stepIndex + 1} / {TOUR_STEPS.length}
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-muted-foreground truncate font-mono text-[11px] tracking-wider">
+            {activeTour.label}
+            {steps.length > 1 ? (
+              <span className="tabular-nums">
+                {' '}
+                · {stepIndex + 1}/{steps.length}
+              </span>
+            ) : null}
           </span>
           <button
             type="button"
             onClick={finish}
-            className="text-muted-foreground hover:text-foreground text-xs font-medium"
+            className="text-muted-foreground hover:text-foreground shrink-0 text-xs font-medium"
           >
-            Skip tour
+            {steps.length > 1 ? 'Skip tour' : 'Got it'}
           </button>
         </div>
         <h3 className="mt-1.5 text-base font-semibold tracking-tight text-balance">{step.title}</h3>
@@ -189,24 +177,26 @@ export function ProductTour() {
 
         <div className="mt-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5" aria-hidden>
-            {TOUR_STEPS.map((_, i) => (
-              <span
-                key={i}
-                className={cn(
-                  'size-1.5 rounded-full transition-colors',
-                  i === stepIndex ? 'bg-primary w-4' : 'bg-muted-foreground/30',
-                )}
-              />
-            ))}
+            {steps.length > 1
+              ? steps.map((_, i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      'size-1.5 rounded-full transition-colors',
+                      i === stepIndex ? 'bg-primary w-4' : 'bg-muted-foreground/30',
+                    )}
+                  />
+                ))
+              : null}
           </div>
           <div className="flex items-center gap-2">
             {stepIndex > 0 ? (
-              <Button variant="ghost" size="sm" onClick={() => setStepIndex((i) => i - 1)}>
+              <Button variant="ghost" size="sm" onClick={() => goTo(stepIndex - 1)}>
                 Back
               </Button>
             ) : null}
-            <Button size="sm" onClick={() => (isLast ? finish() : setStepIndex((i) => i + 1))}>
-              {isLast ? 'Get started' : 'Next'}
+            <Button size="sm" onClick={() => (isLast ? finish() : goTo(stepIndex + 1))}>
+              {isLast ? 'Done' : 'Next'}
             </Button>
           </div>
         </div>

@@ -335,7 +335,7 @@ export function HabitsPage() {
       ) : (
         <>
           {/* Today + weekly grid */}
-          <Card>
+          <Card data-tour="habits-week">
             <CardHeader>
               <CardTitle className="text-base">This week</CardTitle>
               <CardDescription>Tap any day to toggle it</CardDescription>
@@ -441,7 +441,7 @@ export function HabitsPage() {
           </Card>
 
           {/* Heatmap */}
-          <Card>
+          <Card data-tour="habits-heatmap">
             <CardHeader>
               <CardTitle className="text-base">Last 12 weeks</CardTitle>
               <CardDescription>Habit completions per day, across all habits</CardDescription>

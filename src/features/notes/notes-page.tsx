@@ -141,7 +141,7 @@ export function NotesPage() {
 
       <div className="grid gap-4 lg:grid-cols-[14rem_1fr]">
         {/* Folders sidebar */}
-        <Card className="h-fit gap-2 py-3">
+        <Card data-tour="notes-folders" className="h-fit gap-2 py-3">
           <CardContent className="space-y-1 px-3">
             <FolderButton
               label="All notes"
@@ -184,7 +184,7 @@ export function NotesPage() {
         </Card>
 
         <div className="space-y-4">
-          <div className="relative">
+          <div data-tour="notes-search" className="relative">
             <Search aria-hidden className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input
               value={query}

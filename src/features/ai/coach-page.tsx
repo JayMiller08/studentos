@@ -126,7 +126,7 @@ export function CoachPage() {
       >
         <div className="grid gap-4 lg:grid-cols-[16rem_1fr]">
           {/* Conversations */}
-          <Card className="hidden gap-2 py-3 lg:flex">
+          <Card data-tour="coach-conversations" className="hidden gap-2 py-3 lg:flex">
             <CardContent className="flex flex-col gap-1.5 px-3">
               <Button
                 variant="outline"
@@ -247,6 +247,7 @@ export function CoachPage() {
             </ScrollArea>
 
             <form
+              data-tour="coach-composer"
               className="flex items-end gap-2 border-t p-3"
               onSubmit={(event) => {
                 event.preventDefault()

@@ -63,7 +63,12 @@ export interface Profile extends BaseRow {
   longest_streak: number
   last_active_date: string | null
   onboarding_completed: boolean
+  /** @deprecated Superseded by `tours_seen`; kept so legacy rows still migrate. */
   tour_completed: boolean
+  /** Ids of the per-page tours this user has finished or skipped. */
+  tours_seen: string[]
+  /** Show the one-off pointer at the replay control (existing users only). */
+  tour_replay_hint: boolean
   notification_prefs: NotificationPrefs
   language: string
 }
