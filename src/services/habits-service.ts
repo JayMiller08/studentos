@@ -1,6 +1,6 @@
 import { differenceInCalendarDays, parseISO, subDays } from 'date-fns'
 import { toDateKey, todayKey } from '@/lib/utils'
-import { byUser, table } from '@/services/db'
+import { byUser, isUniqueViolation, table } from '@/services/db'
 import type { Habit, HabitCadence, HabitLog } from '@/types/models'
 
 const habits = () => table<Habit>('habits')
@@ -68,7 +68,14 @@ export const habitsService = {
       await habitLogs().remove(first.id)
       return false
     }
-    await habitLogs().insert({ user_id: userId, habit_id: habitId, log_date: dateKey, count: 1 })
+    try {
+      await habitLogs().insert({ user_id: userId, habit_id: habitId, log_date: dateKey, count: 1 })
+    } catch (error) {
+      // Two rapid clicks can both see "not logged yet" before either write
+      // lands (a benign race, not a real failure) — a log for this day
+      // already exists either way, so treat it as already completed.
+      if (!isUniqueViolation(error)) throw error
+    }
     return true
   },
 }

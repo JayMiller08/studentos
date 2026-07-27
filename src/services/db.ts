@@ -15,13 +15,36 @@ export type { Filter, FilterOp, ListOptions, OrderBy } from '@/lib/local-db'
 export class DbError extends Error {
   readonly table: string
   readonly operation: string
+  /** Postgres SQLSTATE code (e.g. '23505' for a unique-constraint violation), when available. */
+  readonly code?: string
 
-  constructor(tableName: string, operation: string, cause: string) {
+  constructor(tableName: string, operation: string, cause: string, code?: string) {
     super(`${operation} on "${tableName}" failed: ${cause}`)
     this.name = 'DbError'
     this.table = tableName
     this.operation = operation
+    this.code = code
   }
+}
+
+/** Postgres SQLSTATE for "unique_violation" — e.g. clicking the same toggle twice. */
+const UNIQUE_VIOLATION = '23505'
+
+export function isUniqueViolation(error: unknown): boolean {
+  return error instanceof DbError && error.code === UNIQUE_VIOLATION
+}
+
+/**
+ * Translate an internal database error into a short, plain-language message
+ * safe to show end users — never the raw Postgres/table/column details.
+ * Callers that know the specific context (e.g. "this habit is already logged
+ * today") should catch and handle the error themselves; this is the generic
+ * fallback used by the global mutation error handler.
+ */
+export function friendlyDbErrorMessage(error: unknown): string {
+  if (isUniqueViolation(error)) return "That's already saved — no changes needed."
+  if (error instanceof DbError) return 'Something went wrong saving your changes. Please try again.'
+  return error instanceof Error ? error.message : 'Something went wrong. Please try again.'
 }
 
 export interface Identifiable {
@@ -96,25 +119,25 @@ function supabaseTable<Row extends Identifiable>(tableName: string): TableClient
         query = query.limit(options.limit)
       }
       const { data, error } = await query
-      if (error) throw new DbError(tableName, 'list', error.message)
+      if (error) throw new DbError(tableName, 'list', error.message, error.code)
       return (data ?? []) as Row[]
     },
 
     async get(id: string) {
       const { data, error } = await client.from(tableName).select('*').eq('id', id).maybeSingle()
-      if (error) throw new DbError(tableName, 'get', error.message)
+      if (error) throw new DbError(tableName, 'get', error.message, error.code)
       return (data as Row | null) ?? null
     },
 
     async insert(values) {
       const { data, error } = await client.from(tableName).insert(values).select().single()
-      if (error) throw new DbError(tableName, 'insert', error.message)
+      if (error) throw new DbError(tableName, 'insert', error.message, error.code)
       return data as Row
     },
 
     async upsert(values) {
       const { data, error } = await client.from(tableName).upsert(values).select().single()
-      if (error) throw new DbError(tableName, 'upsert', error.message)
+      if (error) throw new DbError(tableName, 'upsert', error.message, error.code)
       return data as Row
     },
 
@@ -125,20 +148,20 @@ function supabaseTable<Row extends Identifiable>(tableName: string): TableClient
         .eq('id', id)
         .select()
         .single()
-      if (error) throw new DbError(tableName, 'update', error.message)
+      if (error) throw new DbError(tableName, 'update', error.message, error.code)
       return data as Row
     },
 
     async remove(id) {
       const { error } = await client.from(tableName).delete().eq('id', id)
-      if (error) throw new DbError(tableName, 'remove', error.message)
+      if (error) throw new DbError(tableName, 'remove', error.message, error.code)
     },
 
     async count(filters) {
       let query: any = client.from(tableName).select('id', { count: 'exact', head: true })
       query = applyFilters(query, filters)
       const { count, error } = await query
-      if (error) throw new DbError(tableName, 'count', error.message)
+      if (error) throw new DbError(tableName, 'count', error.message, error.code)
       return count ?? 0
     },
   }

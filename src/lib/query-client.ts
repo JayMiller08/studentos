@@ -1,5 +1,6 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { friendlyDbErrorMessage } from '@/services/db'
 
 /**
  * Shared TanStack Query client.
@@ -29,8 +30,9 @@ export const queryClient = new QueryClient({
   }),
   mutationCache: new MutationCache({
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Something went wrong'
-      toast.error(message)
+      // Raw database errors (constraint names, table/column internals) are
+      // never shown as-is — only short, plain-language messages reach users.
+      toast.error(friendlyDbErrorMessage(error))
     },
   }),
 })

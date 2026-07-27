@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Compass, Loader2, Monitor, Moon, Sun } from 'lucide-react'
+import { Check, Compass, Loader2, Monitor, Moon, Sun } from 'lucide-react'
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -35,14 +35,15 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { GOAL_OPTIONS, MAX_GOALS } from '@/lib/goals'
 import { SA_INSTITUTIONS } from '@/lib/institutions'
 import { cn } from '@/lib/utils'
 import type { NotificationPrefs } from '@/types/models'
 
 const profileSchema = z.object({
   fullName: z.string().trim().min(2, 'Enter your name').max(80),
-  university: z.string().trim().max(120),
-  degree: z.string().trim().max(120),
+  university: z.string().trim().min(1, 'Select your institution').max(120),
+  degree: z.string().trim().min(2, 'Enter your degree or programme').max(120),
   semester: z.string(),
   timezone: z.string().min(1, 'Timezone is required'),
 })
@@ -82,8 +83,8 @@ function ProfileTab() {
   async function onSubmit(values: ProfileValues) {
     await updateProfile({
       full_name: values.fullName,
-      university: values.university || null,
-      degree: values.degree || null,
+      university: values.university,
+      degree: values.degree,
       semester: Number(values.semester),
       timezone: values.timezone,
     })
@@ -196,6 +197,73 @@ function ProfileTab() {
             </div>
           </form>
         </Form>
+      </CardContent>
+    </Card>
+  )
+}
+
+function GoalsCard() {
+  const { profile, updateProfile } = useAuth()
+  const goals = profile?.goals ?? []
+  const [saving, setSaving] = React.useState(false)
+
+  async function toggleGoal(goalId: string) {
+    const alreadySelected = goals.includes(goalId)
+    if (!alreadySelected && goals.length >= MAX_GOALS) return
+    const next = alreadySelected ? goals.filter((id) => id !== goalId) : [...goals, goalId]
+    setSaving(true)
+    try {
+      await updateProfile({ goals: next })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Goals</CardTitle>
+        <CardDescription>
+          What StudentOS should help you focus on — choose 1 to {MAX_GOALS}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2.5">
+        {GOAL_OPTIONS.map((goal) => {
+          const selected = goals.includes(goal.id)
+          const disabled = saving || (!selected && goals.length >= MAX_GOALS)
+          return (
+            <button
+              key={goal.id}
+              type="button"
+              onClick={() => void toggleGoal(goal.id)}
+              aria-pressed={selected}
+              disabled={disabled}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition-colors',
+                selected ? 'border-primary bg-primary/5' : 'hover:bg-accent disabled:opacity-40',
+              )}
+            >
+              <span aria-hidden className="text-lg">
+                {goal.emoji}
+              </span>
+              <span className="flex-1 text-sm font-medium">{goal.label}</span>
+              <span
+                aria-hidden
+                className={cn(
+                  'flex size-5 items-center justify-center rounded-md border transition-colors',
+                  selected ? 'bg-primary border-primary text-primary-foreground' : '',
+                )}
+              >
+                {selected ? <Check className="size-3.5" strokeWidth={3} /> : null}
+              </span>
+            </button>
+          )
+        })}
+        {goals.length === 0 ? (
+          <p className="text-muted-foreground text-sm" role="alert">
+            Choose at least one goal.
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   )
@@ -352,8 +420,9 @@ export function SettingsPage() {
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
         </TabsList>
-        <TabsContent value="profile" className="mt-4">
+        <TabsContent value="profile" className="mt-4 space-y-4">
           <ProfileTab />
+          <GoalsCard />
         </TabsContent>
         <TabsContent value="appearance" className="mt-4">
           <AppearanceTab />

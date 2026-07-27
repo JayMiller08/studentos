@@ -27,24 +27,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { GOAL_OPTIONS, MAX_GOALS } from '@/lib/goals'
 import { SA_INSTITUTIONS } from '@/lib/institutions'
 import { cn } from '@/lib/utils'
 
-const GOAL_OPTIONS = [
-  { id: 'grades', emoji: '🎯', label: 'Improve my grades' },
-  { id: 'productivity', emoji: '⏱️', label: 'Increase productivity' },
-  { id: 'focus', emoji: '🧠', label: 'Stay focused' },
-  { id: 'balance', emoji: '🧘', label: 'Achieve life balance' },
-  { id: 'career', emoji: '🏔️', label: 'Have a successful career' },
-  { id: 'money', emoji: '💰', label: 'Manage my money' },
-] as const
-
-const MAX_GOALS = 3
-
 const stepOneSchema = z.object({
   fullName: z.string().trim().min(2, 'Enter your name').max(80),
-  university: z.string().trim().max(120),
-  degree: z.string().trim().max(120),
+  university: z.string().trim().min(1, 'Select your institution').max(120),
+  degree: z.string().trim().min(2, 'Enter your degree or programme').max(120),
 })
 type StepOneValues = z.infer<typeof stepOneSchema>
 
@@ -218,7 +208,6 @@ export function OnboardingPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                          <FormDescription>Optional</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -232,7 +221,6 @@ export function OnboardingPage() {
                           <FormControl>
                             <Input placeholder="BSc Computer Science" {...field} />
                           </FormControl>
-                          <FormDescription>Optional</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -318,7 +306,7 @@ export function OnboardingPage() {
               <CardContent className="pt-1">
                 <h1 className="mb-1 text-xl font-semibold">What are your goals?</h1>
                 <p className="text-muted-foreground mb-5 text-sm">
-                  Choose up to {MAX_GOALS}. You can change these anytime in settings.
+                  Choose 1 to {MAX_GOALS}. You can change these anytime in settings.
                 </p>
                 <div className="space-y-2.5" role="group" aria-label="Goals">
                   {GOAL_OPTIONS.map((goal) => {
@@ -355,13 +343,18 @@ export function OnboardingPage() {
                     )
                   })}
                 </div>
+                {selectedGoals.length === 0 ? (
+                  <p className="text-destructive mt-3 text-sm" role="alert">
+                    Choose at least one goal to continue.
+                  </p>
+                ) : null}
                 <div className="mt-5 flex gap-2">
                   <Button type="button" variant="outline" onClick={() => setStep(1)}>
                     <ArrowLeft /> Back
                   </Button>
                   <Button
                     className="flex-1"
-                    disabled={saving}
+                    disabled={saving || selectedGoals.length === 0}
                     onClick={() => void completeOnboarding()}
                   >
                     {saving ? <Loader2 className="animate-spin" /> : null}

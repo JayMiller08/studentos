@@ -12,6 +12,7 @@ import {
   Quote,
   Sparkles,
   Timer,
+  UserRoundPen,
 } from 'lucide-react'
 import * as React from 'react'
 import { Link } from 'react-router-dom'
@@ -33,6 +34,7 @@ import { useStudySessions } from '@/features/focus/hooks'
 import { ModuleBadge } from '@/features/assignments/module-badge'
 import { useTasks, useToggleTask } from '@/features/planner/hooks'
 import { usePwaInstall } from '@/hooks/use-pwa-install'
+import { getMissingProfileFields } from '@/lib/profile-completeness'
 import { quoteOfTheDay } from '@/lib/quotes'
 import { cn, formatDueDistance, formatMinutes, percent, todayKey } from '@/lib/utils'
 import { isActiveAssignment, isOverdue } from '@/services/assignments-service'
@@ -84,6 +86,7 @@ export function DashboardPage() {
   const overdueCount = active.filter((assignment) => isOverdue(assignment)).length
 
   const stats = React.useMemo(() => computeFocusStats(sessions), [sessions])
+  const missingProfileFields = getMissingProfileFields(profile)
 
   return (
     <div className="space-y-6">
@@ -98,6 +101,27 @@ export function DashboardPage() {
           ) : undefined
         }
       />
+
+      {/* Profile completion notice — surfaces missing required details */}
+      {missingProfileFields.length > 0 ? (
+        <Card className="border-warning/40 bg-warning/8" role="alert">
+          <CardContent className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+            <div className="bg-warning/15 text-warning-foreground dark:text-warning flex size-10 shrink-0 items-center justify-center rounded-full">
+              <UserRoundPen aria-hidden className="size-5" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium">Finish setting up your profile</p>
+              <p className="text-muted-foreground text-sm">
+                Missing: {missingProfileFields.join(', ')}. Complete these so StudentOS can plan
+                around your studies.
+              </p>
+            </div>
+            <Button asChild size="sm" className="shrink-0">
+              <Link to="/app/settings">Complete profile</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Priority hero — the answer to "what should I do right now?" */}
       <Card
