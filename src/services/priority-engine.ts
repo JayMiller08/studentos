@@ -142,3 +142,41 @@ export function rankAssignments(
     }))
     .sort((a, b) => b.priority_score.score - a.priority_score.score)
 }
+
+export interface AssignmentOrdering {
+  /** Most important first, by whichever rule the plan allows. */
+  items: Assignment[]
+  /** Per-assignment reasoning; empty without smart prioritization. */
+  scoreById: Map<string, PriorityScore>
+  smart: boolean
+}
+
+export interface OrderingOptions extends PriorityOptions {
+  /** Whether the plan includes smart prioritization. */
+  smart: boolean
+}
+
+/**
+ * Order assignments the way the current plan allows.
+ *
+ * Without smart prioritization the list is earliest-deadline-first — honest and
+ * genuinely useful, just not weighted by grade impact or remaining effort. With
+ * it, the priority engine ranks the list and exposes the "why" behind each
+ * position. Both paths return the same shape so the dashboard hero and the
+ * assignments list can never disagree about what matters most.
+ */
+export function orderAssignments(
+  assignments: Assignment[],
+  options: OrderingOptions,
+): AssignmentOrdering {
+  if (!options.smart) {
+    const items = [...assignments].sort((a, b) => a.due_at.localeCompare(b.due_at))
+    return { items, scoreById: new Map(), smart: false }
+  }
+  const ranked = rankAssignments(assignments, options)
+  return {
+    items: ranked,
+    scoreById: new Map(ranked.map((a) => [a.id, a.priority_score])),
+    smart: true,
+  }
+}

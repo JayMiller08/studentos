@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import {
+  Cloud,
+  CloudOff,
   Eye,
   FileText,
   FolderPlus,
@@ -20,6 +22,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/app/providers/auth-provider'
 import { EmptyState } from '@/components/empty-state'
 import { PageHeader } from '@/components/page-header'
+import { QuotaMeter } from '@/components/quota-meter'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -42,10 +45,37 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Textarea } from '@/components/ui/textarea'
 import { useRealtimeTable } from '@/hooks/use-realtime'
 import { useAwardXp } from '@/hooks/use-award-xp'
+import { usePlan } from '@/hooks/use-plan'
 import { queryKeys } from '@/lib/query-keys'
 import { cn } from '@/lib/utils'
 import { notesService, searchNotes } from '@/services/notes-service'
 import type { Note, NoteFolder, NoteVersion } from '@/types/models'
+
+/**
+ * Where these notes actually live. Signed into a real account they sync to the
+ * cloud and follow you between devices; in local demo mode they do not, and
+ * saying so plainly beats implying a backup that isn't there.
+ */
+function SyncStatus() {
+  const { isDemo } = useAuth()
+  const Icon = isDemo ? CloudOff : Cloud
+  return (
+    <span
+      className={cn(
+        'hidden items-center gap-1.5 text-xs font-medium sm:inline-flex',
+        isDemo ? 'text-muted-foreground' : 'text-success',
+      )}
+      title={
+        isDemo
+          ? 'Local demo mode — notes are stored on this device only'
+          : 'Notes sync to your account and are available on every device'
+      }
+    >
+      <Icon aria-hidden className="size-3.5" />
+      {isDemo ? 'This device only' : 'Cloud synced'}
+    </span>
+  )
+}
 
 function useNotesData() {
   const { user } = useAuth()
@@ -74,6 +104,9 @@ export function NotesPage() {
   const notes = notesQuery.data ?? []
   const folders = foldersQuery.data ?? []
 
+  const { plan, quota } = usePlan()
+  const noteQuota = quota('notes', notes.length)
+
   const [query, setQuery] = React.useState('')
   const [activeFolder, setActiveFolder] = React.useState<string | 'all' | 'unfiled'>('all')
   const [editingNote, setEditingNote] = React.useState<Note | null>(null)
@@ -94,7 +127,11 @@ export function NotesPage() {
 
   const createNote = useMutation({
     mutationFn: () =>
-      notesService.create(user!.id, activeFolder !== 'all' && activeFolder !== 'unfiled' ? activeFolder : null),
+      notesService.create(
+        user!.id,
+        plan,
+        activeFolder !== 'all' && activeFolder !== 'unfiled' ? activeFolder : null,
+      ),
     onSuccess: (note) => {
       invalidateNotes()
       void awardXp('note_created')
@@ -133,11 +170,16 @@ export function NotesPage() {
         title="Notes"
         description="Markdown notes with folders, tags and version history"
         actions={
-          <Button onClick={() => createNote.mutate()}>
-            <Plus /> New note
-          </Button>
+          <>
+            <SyncStatus />
+            <Button onClick={() => createNote.mutate()} disabled={noteQuota.atLimit}>
+              <Plus /> New note
+            </Button>
+          </>
         }
       />
+
+      <QuotaMeter usage={noteQuota} noun="notes" />
 
       <div className="grid gap-4 lg:grid-cols-[14rem_1fr]">
         {/* Folders sidebar */}
@@ -206,7 +248,7 @@ export function NotesPage() {
               }
               action={
                 !query ? (
-                  <Button onClick={() => createNote.mutate()}>
+                  <Button onClick={() => createNote.mutate()} disabled={noteQuota.atLimit}>
                     <Plus /> New note
                   </Button>
                 ) : undefined

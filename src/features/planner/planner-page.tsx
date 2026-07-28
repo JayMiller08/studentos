@@ -21,10 +21,12 @@ import {
   subDays,
   subMonths,
 } from 'date-fns'
-import { CalendarDays, ChevronLeft, ChevronRight, Inbox, Plus } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Inbox, Plus, Sparkles } from 'lucide-react'
 import * as React from 'react'
+import { Link } from 'react-router-dom'
 import { EmptyState } from '@/components/empty-state'
 import { PageHeader } from '@/components/page-header'
+import { QuotaMeter } from '@/components/quota-meter'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -34,7 +36,9 @@ import { useModules } from '@/features/assignments/hooks'
 import { useCreateTask, useTasks, useUpdateTask } from '@/features/planner/hooks'
 import { TaskFormDialog } from '@/features/planner/task-form-dialog'
 import { TaskItem } from '@/features/planner/task-item'
+import { usePlan } from '@/hooks/use-plan'
 import { cn, percent, toDateKey } from '@/lib/utils'
+import { isUnfinishedTask } from '@/services/tasks-service'
 import type { Task } from '@/types/models'
 
 type PlannerView = 'day' | 'week' | 'month'
@@ -61,7 +65,7 @@ function DroppableColumn({
   )
 }
 
-function QuickAdd({ dateKey }: { dateKey: string }) {
+function QuickAdd({ dateKey, disabled }: { dateKey: string; disabled?: boolean }) {
   const createTask = useCreateTask()
   const [title, setTitle] = React.useState('')
 
@@ -69,8 +73,9 @@ function QuickAdd({ dateKey }: { dateKey: string }) {
     event.preventDefault()
     const trimmed = title.trim()
     if (!trimmed) return
-    createTask.mutate({ title: trimmed, scheduled_on: dateKey })
-    setTitle('')
+    // Only clear once the task is really saved — a create rejected by the plan
+    // quota should hand the words back, not eat them.
+    createTask.mutate({ title: trimmed, scheduled_on: dateKey }, { onSuccess: () => setTitle('') })
   }
 
   return (
@@ -78,10 +83,16 @@ function QuickAdd({ dateKey }: { dateKey: string }) {
       <Input
         value={title}
         onChange={(event) => setTitle(event.target.value)}
-        placeholder="Quick add a task for this day…"
+        placeholder={disabled ? 'Task limit reached — upgrade for unlimited' : 'Quick add a task for this day…'}
         aria-label="Quick add task"
+        disabled={disabled}
       />
-      <Button type="submit" size="icon" aria-label="Add task" disabled={createTask.isPending}>
+      <Button
+        type="submit"
+        size="icon"
+        aria-label="Add task"
+        disabled={disabled || createTask.isPending}
+      >
         <Plus />
       </Button>
     </form>
@@ -93,10 +104,14 @@ export function PlannerPage() {
   const { data: modules = [] } = useModules()
   const updateTask = useUpdateTask()
 
+  const { quota } = usePlan()
+  const taskQuota = quota('tasks', tasks.filter(isUnfinishedTask).length)
+
   const [view, setView] = React.useState<PlannerView>('day')
   const [anchor, setAnchor] = React.useState<Date>(new Date())
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Task | null>(null)
+  const [limitHit, setLimitHit] = React.useState(false)
 
   const moduleById = React.useMemo(
     () => new Map(modules.map((module) => [module.id, module])),
@@ -166,6 +181,10 @@ export function PlannerPage() {
         actions={
           <Button
             onClick={() => {
+              if (taskQuota.atLimit) {
+                setLimitHit(true)
+                return
+              }
               setEditing(null)
               setFormOpen(true)
             }}
@@ -174,6 +193,28 @@ export function PlannerPage() {
           </Button>
         }
       />
+
+      <QuotaMeter usage={taskQuota} noun="unfinished tasks" />
+
+      {limitHit || taskQuota.atLimit ? (
+        <Card className="border-primary/40 bg-primary/5">
+          <CardContent className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+            <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-full">
+              <Sparkles aria-hidden className="size-5" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium">You've reached the Free plan task limit</p>
+              <p className="text-muted-foreground text-sm">
+                Tick off or delete something to free a slot, or upgrade to Student Pro for unlimited
+                tasks, the AI study planner and smart prioritization.
+              </p>
+            </div>
+            <Button asChild size="sm" className="shrink-0">
+              <Link to="/app/billing">Upgrade</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div data-tour="planner-views" className="flex flex-wrap items-center justify-between gap-3">
         <Tabs value={view} onValueChange={(value) => setView(value as PlannerView)}>
@@ -215,7 +256,7 @@ export function PlannerPage() {
                 ) : null}
               </CardHeader>
               <CardContent className="space-y-3">
-                <QuickAdd dateKey={anchorKey} />
+                <QuickAdd dateKey={anchorKey} disabled={taskQuota.atLimit} />
                 <DroppableColumn id={`day:${anchorKey}`} className="min-h-24 space-y-2 pb-1">
                   {dayTasks.length === 0 ? (
                     <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
@@ -402,6 +443,7 @@ export function PlannerPage() {
         onOpenChange={setFormOpen}
         task={editing}
         defaultDate={anchorKey}
+        onLimitReached={() => setLimitHit(true)}
       />
     </div>
   )

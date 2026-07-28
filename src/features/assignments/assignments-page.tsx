@@ -1,8 +1,8 @@
 import { BookOpen, FolderKanban, Plus, Sparkles } from 'lucide-react'
 import * as React from 'react'
-import { useAuth } from '@/app/providers/auth-provider'
 import { EmptyState } from '@/components/empty-state'
 import { PageHeader } from '@/components/page-header'
+import { QuotaMeter } from '@/components/quota-meter'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,15 +11,14 @@ import { AssignmentCard } from '@/features/assignments/assignment-card'
 import { AssignmentFormDialog } from '@/features/assignments/assignment-form-dialog'
 import { useAssignments, useModules } from '@/features/assignments/hooks'
 import { ModulesDialog } from '@/features/assignments/modules-dialog'
-import { PLANS } from '@/lib/plans'
+import { usePlan } from '@/hooks/use-plan'
 import { isActiveAssignment } from '@/services/assignments-service'
-import { rankAssignments } from '@/services/priority-engine'
+import { orderAssignments } from '@/services/priority-engine'
 import type { Assignment } from '@/types/models'
 
 type FilterTab = 'active' | 'done' | 'all'
 
 export function AssignmentsPage() {
-  const { profile } = useAuth()
   const { data: assignments, isLoading } = useAssignments()
   const { data: modules = [] } = useModules()
 
@@ -34,37 +33,27 @@ export function AssignmentsPage() {
     [modules],
   )
 
-  const plan = profile?.plan ?? 'free'
-  const limit = PLANS[plan].limits.assignments
+  const { has, quota } = usePlan()
+  const smartOrdering = has('smartPrioritization')
   const activeCount = (assignments ?? []).filter(isActiveAssignment).length
-  const atLimit = limit !== null && activeCount >= limit
+  const assignmentQuota = quota('assignments', activeCount)
+  const atLimit = assignmentQuota.atLimit
+  const limit = assignmentQuota.limit
 
-  const smartOrdering = PLANS[plan].limits.smartPrioritization
-
-  const scoreById = React.useMemo(() => {
-    if (!smartOrdering) return new Map<string, ReturnType<typeof rankAssignments>[number]['priority_score']>()
-    return new Map(
-      rankAssignments((assignments ?? []).filter(isActiveAssignment)).map((scored) => [
-        scored.id,
-        scored.priority_score,
-      ]),
-    )
-  }, [assignments, smartOrdering])
+  // One ordering rule for the whole app: the priority engine on plans that
+  // include it, earliest-deadline-first otherwise.
+  const ordering = React.useMemo(
+    () => orderAssignments((assignments ?? []).filter(isActiveAssignment), { smart: smartOrdering }),
+    [assignments, smartOrdering],
+  )
+  const scoreById = ordering.scoreById
 
   const visible = React.useMemo(() => {
     const list = assignments ?? []
-    let filtered: Assignment[]
-    if (filter === 'active') filtered = list.filter(isActiveAssignment)
-    else if (filter === 'done') filtered = list.filter((a) => !isActiveAssignment(a))
-    else filtered = list
-    if (smartOrdering && filter === 'active') {
-      // Smart prioritization: highest-score first instead of plain due date.
-      filtered = [...filtered].sort(
-        (a, b) => (scoreById.get(b.id)?.score ?? 0) - (scoreById.get(a.id)?.score ?? 0),
-      )
-    }
-    return filtered
-  }, [assignments, filter, smartOrdering, scoreById])
+    if (filter === 'active') return ordering.items
+    if (filter === 'done') return list.filter((a) => !isActiveAssignment(a))
+    return list
+  }, [assignments, filter, ordering])
 
   function openCreate() {
     if (atLimit) {
@@ -100,6 +89,8 @@ export function AssignmentsPage() {
           </>
         }
       />
+
+      <QuotaMeter usage={assignmentQuota} noun="active assignments" />
 
       {(limitHit || atLimit) && limit !== null ? (
         <Card className="border-primary/40 bg-primary/5">

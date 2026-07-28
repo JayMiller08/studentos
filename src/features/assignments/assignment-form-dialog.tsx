@@ -33,7 +33,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { useCreateAssignment, useModules, useUpdateAssignment } from '@/features/assignments/hooks'
 import { numberField, optionalNumberField } from '@/lib/forms'
-import { PlanLimitError } from '@/services/assignments-service'
+import { PlanLimitError } from '@/lib/plans'
 import type { Assignment } from '@/types/models'
 
 const NO_MODULE = 'none'

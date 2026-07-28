@@ -1,5 +1,5 @@
 import { isPast, parseISO } from 'date-fns'
-import { canCreateAssignment } from '@/lib/plans'
+import { assertCanCreate } from '@/lib/plans'
 import { byUser, table } from '@/services/db'
 import type { Assignment, AssignmentStatus, Plan, Priority } from '@/types/models'
 
@@ -19,15 +19,6 @@ export interface AssignmentInput {
   submission_url?: string | null
   notes?: string | null
   grade?: number | null
-}
-
-export class PlanLimitError extends Error {
-  constructor(limit: number) {
-    super(
-      `The Free plan includes up to ${limit} active assignments. Upgrade to Student Pro for unlimited assignments.`,
-    )
-    this.name = 'PlanLimitError'
-  }
 }
 
 /** An assignment is "active" while it still needs work (drives the free-plan limit). */
@@ -52,10 +43,7 @@ export const assignmentsService = {
 
   async create(userId: string, plan: Plan, input: AssignmentInput): Promise<Assignment> {
     const existing = await assignmentsService.list(userId)
-    const activeCount = existing.filter(isActiveAssignment).length
-    if (!canCreateAssignment(plan, activeCount)) {
-      throw new PlanLimitError(3)
-    }
+    assertCanCreate(plan, 'assignments', existing.filter(isActiveAssignment).length)
     return assignments().insert({
       user_id: userId,
       title: input.title,

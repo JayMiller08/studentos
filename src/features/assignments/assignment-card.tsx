@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Progress } from '@/components/ui/progress'
 import { ModuleBadge } from '@/features/assignments/module-badge'
+import { PriorityBadge } from '@/features/assignments/priority-badge'
 import { useDeleteAssignment, useUpdateAssignment } from '@/features/assignments/hooks'
 import { isOverdue } from '@/services/assignments-service'
 import type { PriorityScore } from '@/services/priority-engine'
@@ -30,13 +31,6 @@ const STATUS_LABEL: Record<Assignment['status'], string> = {
   in_progress: 'In progress',
   submitted: 'Submitted',
   graded: 'Graded',
-}
-
-const BAND_VARIANT: Record<PriorityScore['band'], 'destructive' | 'warning' | 'secondary' | 'muted'> = {
-  critical: 'destructive',
-  high: 'warning',
-  medium: 'secondary',
-  low: 'muted',
 }
 
 interface AssignmentCardProps {
@@ -59,11 +53,7 @@ export function AssignmentCard({ assignment, module, onEdit, score }: Assignment
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <ModuleBadge module={module} />
-            {score && !done ? (
-              <Badge variant={BAND_VARIANT[score.band]} title={score.reason}>
-                ⚡ {score.score}
-              </Badge>
-            ) : null}
+            {score && !done ? <PriorityBadge score={score} /> : null}
             <Badge variant={PRIORITY_VARIANT[assignment.priority]} className="capitalize">
               {assignment.priority}
             </Badge>
