@@ -125,17 +125,15 @@ implementation can be replaced in one place.
 See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the full runbook. In short:
 
 1. Create a Supabase project; set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-2. Push the schema: `supabase db push` (migrations in `supabase/migrations`).
+2. Push the schema: `npm run db:push` (migrations in `supabase/migrations`).
 3. Set server secrets and deploy edge functions:
    ```bash
-   supabase secrets set GEMINI_API_KEY=… STRIPE_SECRET_KEY=… \
+   npx supabase secrets set GEMINI_API_KEY=… STRIPE_SECRET_KEY=… \
      STRIPE_WEBHOOK_SECRET=… STRIPE_PRICE_PRO_MONTHLY=… STRIPE_PRICE_ELITE_MONTHLY=…
-   supabase functions deploy ai-chat
-   supabase functions deploy ai-plan
-   supabase functions deploy billing
-   supabase functions deploy stripe-webhook --no-verify-jwt
-   supabase functions deploy send-reminders --no-verify-jwt
+   npm run functions:deploy
    ```
+   The CLI ships as a devDependency — `npm install` then `npx supabase …`
+   (Supabase does not support `npm i -g supabase`).
 4. Point a Stripe webhook at the `stripe-webhook` function.
 5. Deploy the frontend to Vercel with the same env vars per environment
    (Development / Preview / Production).

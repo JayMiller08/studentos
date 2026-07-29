@@ -12,13 +12,18 @@ production setup.
 - A Google Gemini API key (for the AI coach and Smart Plan notes) — create one
   in [Google AI Studio](https://aistudio.google.com/apikey) and make sure the
   Generative Language API is enabled for the project.
-- The Supabase CLI: `npm i -g supabase`.
+- The Supabase CLI. It is pinned as a devDependency, so `npm install` is all
+  you need — then run it with `npx supabase …`. Global npm installs are *not*
+  supported by Supabase (`npm i -g supabase` fails by design); on a machine
+  without this repo, use Scoop (`scoop install supabase`), Homebrew, or the
+  release binary instead.
 
 ## 1. Database
 
 ```bash
-supabase link --project-ref <your-project-ref>
-supabase db push          # applies supabase/migrations in order
+npx supabase login
+npx supabase link --project-ref <your-project-ref>
+npm run db:push           # applies supabase/migrations in order
 ```
 
 Migrations create:
@@ -92,7 +97,7 @@ get a profile row from the `handle_new_user` trigger (name comes from Google's
 ## 3. Secrets & edge functions
 
 ```bash
-supabase secrets set \
+npx supabase secrets set \
   GEMINI_API_KEY=AIza… \
   GEMINI_MODEL=gemini-2.5-flash \
   STRIPE_SECRET_KEY=sk_live_… \
@@ -101,11 +106,15 @@ supabase secrets set \
   STRIPE_PRICE_ELITE_MONTHLY=price_… \
   CRON_SECRET=$(openssl rand -hex 16)
 
-supabase functions deploy ai-chat            # JWT-verified (Pro-gated)
-supabase functions deploy ai-plan            # JWT-verified (Pro-gated)
-supabase functions deploy billing            # JWT-verified
-supabase functions deploy stripe-webhook --no-verify-jwt
-supabase functions deploy send-reminders --no-verify-jwt
+# All five at once:
+npm run functions:deploy
+
+# …or individually:
+npx supabase functions deploy ai-chat            # JWT-verified (Pro-gated)
+npx supabase functions deploy ai-plan            # JWT-verified (Pro-gated)
+npx supabase functions deploy billing            # JWT-verified
+npx supabase functions deploy stripe-webhook --no-verify-jwt
+npx supabase functions deploy send-reminders --no-verify-jwt
 ```
 
 `supabase/config.toml` declares the daily cron schedule for `send-reminders`.
