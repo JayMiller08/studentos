@@ -1,25 +1,24 @@
 /**
  * AI Study Coach — Supabase Edge Function.
  *
- * Holds the Anthropic key server-side, verifies the caller's JWT, enforces
- * plan entitlements (Pro/Elite), and forwards the conversation with a
- * mode-specific system prompt. Deploy: `supabase functions deploy ai-chat`.
- * Secrets: `supabase secrets set ANTHROPIC_API_KEY=...`
+ * Verifies the caller's JWT, enforces plan entitlements (Pro/Elite), and
+ * forwards the conversation to Gemini with a mode-specific system prompt.
+ * The API key stays server-side.
+ *
+ * Deploy:  `supabase functions deploy ai-chat`
+ * Secrets: `supabase secrets set GEMINI_API_KEY=...`
  */
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { requirePaidCaller } from '../_shared/auth.ts'
 import { corsPreflight, jsonResponse } from '../_shared/cors.ts'
-
-const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
-const ANTHROPIC_MODEL = Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-sonnet-5'
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
+import { type ChatMessage, GeminiError, generate, isGeminiConfigured } from '../_shared/gemini.ts'
 
 const BASE_RULES = `You are the StudentOS study coach for university students.
 Ground rules:
 - NEVER invent deadlines, dates, grades or assignments. Only reference items listed in the "Student context" block; if it is empty, say you don't have their schedule.
 - Be concise, warm and practical. Prefer numbered steps and short paragraphs.
 - Encourage evidence-based techniques: active recall, spaced repetition, focused blocks.
-- If asked to do the student's graded work for them, help them learn it instead.`
+- If asked to do the student's graded work for them, help them learn it instead.
+- Reply in GitHub-flavored Markdown. Do not wrap the whole reply in a code fence.`
 
 const MODE_PROMPTS: Record<string, string> = {
   coach: `${BASE_RULES}\nRole: personal study coach. Help plan, prioritize and stay accountable.`,
@@ -30,37 +29,16 @@ const MODE_PROMPTS: Record<string, string> = {
   code: `${BASE_RULES}\nRole: programming tutor. Explain concepts and debug with the student. Prefer guiding questions and minimal corrected snippets over full solutions.`,
 }
 
-interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-}
-
 Deno.serve(async (req) => {
   const preflight = corsPreflight(req)
   if (preflight) return preflight
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
-  if (!ANTHROPIC_API_KEY) return jsonResponse({ error: 'AI is not configured on this deployment' }, 503)
-
-  const authHeader = req.headers.get('Authorization') ?? ''
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  })
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-  if (authError || !user) return jsonResponse({ error: 'Unauthorized' }, 401)
-
-  // Entitlement check — the AI coach is a paid feature.
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('plan')
-    .eq('id', user.id)
-    .single()
-  if (!profile || profile.plan === 'free') {
-    return jsonResponse({ error: 'The AI coach requires Student Pro.' }, 403)
+  if (!isGeminiConfigured) {
+    return jsonResponse({ error: 'AI is not configured on this deployment' }, 503)
   }
+
+  const { caller, response } = await requirePaidCaller(req)
+  if (!caller) return response
 
   let payload: { mode?: string; messages?: ChatMessage[]; studyContext?: string }
   try {
@@ -77,37 +55,12 @@ Deno.serve(async (req) => {
 
   const system = `${MODE_PROMPTS[mode] ?? MODE_PROMPTS.coach}\n\nStudent context:\n${studyContext || '(none provided)'}`
 
-  const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 1500,
-      system,
-      messages: history.map((message) => ({
-        role: message.role,
-        content: String(message.content).slice(0, 8000),
-      })),
-    }),
-  })
-
-  if (!anthropicResponse.ok) {
-    const detail = await anthropicResponse.text()
-    console.error('[ai-chat] anthropic error', anthropicResponse.status, detail)
+  try {
+    const reply = await generate({ system, messages: history, maxOutputTokens: 1500 })
+    return jsonResponse({ reply })
+  } catch (error) {
+    if (error instanceof GeminiError) return jsonResponse({ error: error.message }, error.status)
+    console.error('[ai-chat] unexpected failure', error)
     return jsonResponse({ error: 'The AI service is temporarily unavailable.' }, 502)
   }
-
-  const completion = (await anthropicResponse.json()) as {
-    content: Array<{ type: string; text?: string }>
-  }
-  const reply = completion.content
-    .filter((block) => block.type === 'text' && block.text)
-    .map((block) => block.text)
-    .join('\n')
-
-  return jsonResponse({ reply })
 })

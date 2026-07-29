@@ -9,7 +9,9 @@ production setup.
 - A Supabase project (free tier is fine to start).
 - A Vercel account.
 - A Stripe account (test mode first).
-- An Anthropic API key (for the AI coach).
+- A Google Gemini API key (for the AI coach and Smart Plan notes) — create one
+  in [Google AI Studio](https://aistudio.google.com/apikey) and make sure the
+  Generative Language API is enabled for the project.
 - The Supabase CLI: `npm i -g supabase`.
 
 ## 1. Database
@@ -91,8 +93,8 @@ get a profile row from the `handle_new_user` trigger (name comes from Google's
 
 ```bash
 supabase secrets set \
-  ANTHROPIC_API_KEY=sk-ant-… \
-  ANTHROPIC_MODEL=claude-sonnet-5 \
+  GEMINI_API_KEY=AIza… \
+  GEMINI_MODEL=gemini-2.5-flash \
   STRIPE_SECRET_KEY=sk_live_… \
   STRIPE_WEBHOOK_SECRET=whsec_… \
   STRIPE_PRICE_PRO_MONTHLY=price_… \
@@ -100,6 +102,7 @@ supabase secrets set \
   CRON_SECRET=$(openssl rand -hex 16)
 
 supabase functions deploy ai-chat            # JWT-verified (Pro-gated)
+supabase functions deploy ai-plan            # JWT-verified (Pro-gated)
 supabase functions deploy billing            # JWT-verified
 supabase functions deploy stripe-webhook --no-verify-jwt
 supabase functions deploy send-reminders --no-verify-jwt

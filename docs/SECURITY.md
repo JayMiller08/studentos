@@ -28,12 +28,14 @@ through `profiles` RLS.
 |--------|----------------|----------|
 | Supabase anon key | browser (safe by design) | — |
 | Supabase service-role key | edge-function env only | browser, git |
-| Anthropic API key | `ai-chat` function env | browser |
+| Gemini API key | `ai-chat` / `ai-plan` function env | browser |
 | Stripe secret key | `billing` / `stripe-webhook` env | browser |
 | Stripe webhook secret | `stripe-webhook` env | browser |
 
-The frontend never calls Stripe or Anthropic directly — it calls an edge
-function that holds the key and enforces entitlements.
+The frontend never calls Stripe or Gemini directly — it calls an edge function
+that holds the key and enforces entitlements. Every AI function runs the same
+`requirePaidCaller` check (`_shared/auth.ts`): the client's `PlanGate` is UX
+only, and a request can always be replayed by hand.
 
 ## Billing integrity
 

@@ -1,5 +1,5 @@
 import { format, parseISO } from 'date-fns'
-import { CalendarCheck, Lightbulb, RefreshCw, Sparkles } from 'lucide-react'
+import { CalendarCheck, Lightbulb, Loader2, RefreshCw, Sparkles } from 'lucide-react'
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -26,6 +26,7 @@ import {
 import { useAssignments, useModules } from '@/features/assignments/hooks'
 import { useCreateTask, useTasks } from '@/features/planner/hooks'
 import { formatMinutes } from '@/lib/utils'
+import { aiService } from '@/services/ai-service'
 import { generateStudyPlan, type StudyPlan, type StudyPlanDay } from '@/services/study-planner'
 
 function DayCard({
@@ -130,6 +131,9 @@ export function SmartPlanPage() {
   const [plan, setPlan] = React.useState<StudyPlan | null>(null)
   const [appliedDays, setAppliedDays] = React.useState<Set<string>>(new Set())
   const [applying, setApplying] = React.useState(false)
+  /** Gemini-written notes for the current plan; null falls back to rule-based. */
+  const [aiNotes, setAiNotes] = React.useState<string[] | null>(null)
+  const [notesLoading, setNotesLoading] = React.useState(false)
 
   // Re-entering your real capacity every visit is friction; remember it.
   React.useEffect(() => {
@@ -159,14 +163,46 @@ export function SmartPlanPage() {
   )
 
   function generate() {
-    setPlan(
-      generateStudyPlan(assignments, {
+    const next = generateStudyPlan(assignments, {
+      horizonDays: Number(horizon),
+      dailyCapacityMinutes: capacityMinutes,
+      stressLevel: stress / 100,
+    })
+    setPlan(next)
+    setAppliedDays(new Set())
+    setAiNotes(null)
+    void loadNotes(next)
+  }
+
+  /**
+   * Ask the coach to narrate the plan. The schedule above is already final —
+   * this only adds guidance, and `getPlanNotes` resolves to null rather than
+   * throwing, so a missing key or a dead network just leaves the rule-based
+   * recommendations in place.
+   */
+  async function loadNotes(next: StudyPlan) {
+    setNotesLoading(true)
+    try {
+      const notes = await aiService.getPlanNotes({
         horizonDays: Number(horizon),
         dailyCapacityMinutes: capacityMinutes,
         stressLevel: stress / 100,
-      }),
-    )
-    setAppliedDays(new Set())
+        unscheduledMinutes: next.unscheduledMinutes,
+        days: next.days.map((day) => ({
+          date: day.dateKey,
+          minutes: day.totalMinutes,
+          heavy: day.heavy,
+          blocks: day.blocks.map((block) => ({
+            title: block.title,
+            minutes: block.minutes,
+            reason: block.reason,
+          })),
+        })),
+      })
+      setAiNotes(notes)
+    } finally {
+      setNotesLoading(false)
+    }
   }
 
   /**
@@ -331,19 +367,31 @@ export function SmartPlanPage() {
               </Card>
             ) : null}
 
-            {plan.recommendations.length > 0 ? (
+            {notesLoading || plan.recommendations.length > 0 || aiNotes ? (
               <Card className="bg-secondary/40">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Lightbulb aria-hidden className="text-warning size-4" /> Coach notes
+                    {aiNotes ? (
+                      <Badge variant="secondary" className="gap-1">
+                        <Sparkles aria-hidden className="size-3" /> AI
+                      </Badge>
+                    ) : null}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="list-disc space-y-1.5 pl-5 text-sm">
-                    {plan.recommendations.map((recommendation) => (
-                      <li key={recommendation}>{recommendation}</li>
-                    ))}
-                  </ul>
+                  {notesLoading ? (
+                    <p className="text-muted-foreground flex items-center gap-2 text-sm">
+                      <Loader2 aria-hidden className="size-4 animate-spin" />
+                      Writing notes on your plan…
+                    </p>
+                  ) : (
+                    <ul className="list-disc space-y-1.5 pl-5 text-sm">
+                      {(aiNotes ?? plan.recommendations).map((note) => (
+                        <li key={note}>{note}</li>
+                      ))}
+                    </ul>
+                  )}
                 </CardContent>
               </Card>
             ) : null}
