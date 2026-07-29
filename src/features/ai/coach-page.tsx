@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bot, Loader2, MessageSquarePlus, Send, Trash2 } from 'lucide-react'
+import { AlertTriangle, Bot, Loader2, MessageSquarePlus, RotateCcw, Send, Trash2 } from 'lucide-react'
 import * as React from 'react'
 import ReactMarkdown from 'react-markdown'
 import { useAuth } from '@/app/providers/auth-provider'
@@ -11,10 +11,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import { useAssignments } from '@/features/assignments/hooks'
+import { usePlan } from '@/hooks/use-plan'
 import { queryKeys } from '@/lib/query-keys'
 import { cn, formatDueDistance, getInitials } from '@/lib/utils'
 import { aiService, COACH_MODES, type CoachMode } from '@/services/ai-service'
-import { rankAssignments } from '@/services/priority-engine'
+import { orderAssignments } from '@/services/priority-engine'
 import type { AIConversation } from '@/types/models'
 
 function useConversations() {
@@ -37,6 +38,8 @@ function useMessages(conversationId: string | null) {
 
 export function CoachPage() {
   const { user } = useAuth()
+  const { has } = usePlan()
+  const smartPrioritization = has('smartPrioritization')
   const queryClient = useQueryClient()
   const { data: conversationList = [] } = useConversations()
   const { data: assignments = [] } = useAssignments()
@@ -44,18 +47,25 @@ export function CoachPage() {
   const [activeId, setActiveId] = React.useState<string | null>(null)
   const [mode, setMode] = React.useState<CoachMode>('coach')
   const [draft, setDraft] = React.useState('')
+  /** Last send whose reply failed, kept so the student can retry it. */
+  const [failedSend, setFailedSend] = React.useState<{
+    text: string
+    conversation: AIConversation
+  } | null>(null)
   const scrollRef = React.useRef<HTMLDivElement | null>(null)
 
   const activeConversation = conversationList.find((c) => c.id === activeId) ?? null
   const { data: messageList = [] } = useMessages(activeId)
 
-  // Real deadlines only — this is what keeps the coach honest.
+  // Real deadlines only — this is what keeps the coach honest. Ordering goes
+  // through the shared helper so the coach agrees with the dashboard about
+  // what matters most.
   const studyContext = React.useMemo(() => {
     const active = assignments.filter(
       (a) => a.status === 'not_started' || a.status === 'in_progress',
     )
-    return rankAssignments(active)
-      .slice(0, 6)
+    return orderAssignments(active, { smart: smartPrioritization })
+      .items.slice(0, 6)
       .map(
         (a) =>
           `- "${a.title}" — ${formatDueDistance(a.due_at)}, ${a.progress}% done, weight ${a.weight}%, est ${Math.round(a.estimated_minutes / 60)}h`,
@@ -69,11 +79,19 @@ export function CoachPage() {
 
   const sendMessage = useMutation({
     mutationFn: async ({ text, conversation }: { text: string; conversation: AIConversation }) => {
-      await aiService.appendMessage(user!.id, conversation.id, 'user', text)
-      const history = [
-        ...messageList.map((m) => ({ role: m.role, content: m.content })),
-        { role: 'user' as const, content: text },
-      ]
+      // Read the thread fresh — the rendered copy lags behind a retry, and
+      // sending stale history would ask the model to answer twice.
+      const existing = await aiService.listMessages(user!.id, conversation.id)
+      const last = existing[existing.length - 1]
+      // On a retry the student's message is already stored; don't duplicate it.
+      const alreadySaved = last?.role === 'user' && last.content === text
+
+      if (!alreadySaved) {
+        await aiService.appendMessage(user!.id, conversation.id, 'user', text)
+      }
+      const history = existing.map((m) => ({ role: m.role, content: m.content }))
+      if (!alreadySaved) history.push({ role: 'user', content: text })
+
       const reply = await aiService.getReply({
         mode: conversation.mode,
         history,
@@ -84,6 +102,8 @@ export function CoachPage() {
         await aiService.renameConversation(conversation.id, text.slice(0, 48))
       }
     },
+    onSuccess: () => setFailedSend(null),
+    onError: (_error, variables) => setFailedSend(variables),
     onSettled: (_data, _error, variables) => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.aiMessages(user!.id, variables.conversation.id),
@@ -95,15 +115,25 @@ export function CoachPage() {
   async function handleSend() {
     const text = draft.trim()
     if (!text || sendMessage.isPending) return
-    setDraft('')
 
-    let conversation = activeConversation
-    if (!conversation) {
-      conversation = await aiService.createConversation(user!.id, mode)
-      setActiveId(conversation.id)
-      void queryClient.invalidateQueries({ queryKey: queryKeys.aiConversations(user!.id) })
+    try {
+      let conversation = activeConversation
+      if (!conversation) {
+        conversation = await aiService.createConversation(user!.id, mode)
+        setActiveId(conversation.id)
+        void queryClient.invalidateQueries({ queryKey: queryKeys.aiConversations(user!.id) })
+      }
+      // Clear only once the message is on its way to a real conversation, so a
+      // failure to even start one hands the words back.
+      setDraft('')
+      await sendMessage.mutateAsync({ text, conversation })
+    } catch {
+      // Starting the conversation failed, so nothing was saved and there is no
+      // thread to retry from — put the draft back. A failure *after* the
+      // message was stored is recoverable via the retry bar instead.
+      setDraft((current) => current || text)
+      // The reason surfaces through the global mutation toast.
     }
-    sendMessage.mutate({ text, conversation })
   }
 
   async function removeConversation(id: string) {
@@ -241,6 +271,25 @@ export function CoachPage() {
                 {sendMessage.isPending ? (
                   <div className="text-muted-foreground flex items-center gap-2 text-sm">
                     <Loader2 className="size-4 animate-spin" /> Thinking…
+                  </div>
+                ) : null}
+                {failedSend && !sendMessage.isPending ? (
+                  <div
+                    role="alert"
+                    className="border-destructive/40 bg-destructive/5 flex flex-col items-start gap-2 rounded-xl border p-3 text-sm sm:flex-row sm:items-center"
+                  >
+                    <AlertTriangle aria-hidden className="text-destructive size-4 shrink-0" />
+                    <p className="flex-1">
+                      The coach couldn’t reply. Your message was saved — try again.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={() => sendMessage.mutate(failedSend)}
+                    >
+                      <RotateCcw /> Retry
+                    </Button>
                   </div>
                 ) : null}
               </div>
