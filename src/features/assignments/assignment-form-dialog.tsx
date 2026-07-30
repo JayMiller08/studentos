@@ -183,7 +183,9 @@ export function AssignmentFormDialog({
                       <SelectItem value={NO_MODULE}>No module</SelectItem>
                       {modules.map((module) => (
                         <SelectItem key={module.id} value={module.id}>
-                          {module.code ? `${module.code} — ${module.name}` : module.name}
+                          {/* Code only — a full module name overflows the
+                              trigger. Older modules predate the required code. */}
+                          {module.code ?? module.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
