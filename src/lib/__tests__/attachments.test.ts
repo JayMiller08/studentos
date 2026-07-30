@@ -35,10 +35,16 @@ describe('resolveMimeType', () => {
     expect(resolveMimeType(file('notes.markdown', 10, 'text/markdown'))).toBe('text/plain')
   })
 
+  it('accepts Word documents, which are converted to text before sending', () => {
+    // The most common thing a student calls "a document".
+    expect(resolveMimeType(file('essay.docx', 10))).toContain('wordprocessingml')
+  })
+
   it('rejects everything else', () => {
     expect(resolveMimeType(file('archive.zip', 10, 'application/zip'))).toBeNull()
-    expect(resolveMimeType(file('essay.docx', 10))).toBeNull()
     expect(resolveMimeType(file('clip.mp4', 10, 'video/mp4'))).toBeNull()
+    // Legacy .doc is a different, binary format mammoth cannot read.
+    expect(resolveMimeType(file('old.doc', 10))).toBeNull()
   })
 })
 
@@ -47,8 +53,10 @@ describe('validateFile', () => {
     expect(validateFile(file('slides.pdf', 1_000_000))).toBeNull()
   })
 
-  it('rejects an unsupported type by name', () => {
-    expect(validateFile(file('essay.docx', 1000))).toContain('essay.docx')
+  it('rejects an unsupported type by name and says what is allowed', () => {
+    const problem = validateFile(file('archive.zip', 1000, 'application/zip'))
+    expect(problem).toContain('archive.zip')
+    expect(problem).toContain('Word')
   })
 
   it('rejects an empty file', () => {

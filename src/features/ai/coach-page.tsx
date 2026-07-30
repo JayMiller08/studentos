@@ -31,6 +31,7 @@ import {
   ATTACHMENT_ACCEPT,
   formatBytes,
   MAX_FILES,
+  SUPPORTED_FORMATS,
   toAttachment,
   validateFile,
 } from '@/lib/attachments'
@@ -423,7 +424,7 @@ export function CoachPage() {
                   size="icon"
                   variant="outline"
                   aria-label="Attach a file"
-                  title="Attach a PDF, image or text file"
+                  title={`Attach a ${SUPPORTED_FORMATS}`}
                   disabled={sendMessage.isPending || attachments.length >= MAX_FILES}
                   onClick={() => fileInputRef.current?.click()}
                 >

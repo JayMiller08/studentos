@@ -16,6 +16,9 @@ export interface Attachment {
   data: string
 }
 
+/** Word's own MIME type, used only to recognise the file before converting. */
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
 /** Per-file cap. Base64 adds ~33%, so this stays well inside request limits. */
 export const MAX_FILE_BYTES = 5 * 1024 * 1024
 /** Total across one message. */
@@ -32,12 +35,19 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   txt: 'text/plain',
   md: 'text/plain',
   csv: 'text/plain',
+  // Word files are the most common thing a student calls "a document".
+  // Gemini cannot read .docx, so these are converted to text in the browser
+  // (see `toAttachment`) and sent as text/plain.
+  docx: DOCX_MIME,
 }
 
 const ACCEPTED_MIME_TYPES = new Set(Object.values(MIME_BY_EXTENSION))
 
 /** `accept` attribute for the file input. */
-export const ATTACHMENT_ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,.heic,.txt,.md,.csv'
+export const ATTACHMENT_ACCEPT = '.pdf,.docx,.png,.jpg,.jpeg,.webp,.heic,.txt,.md,.csv'
+
+/** Human list of what can be attached, for UI copy and error messages. */
+export const SUPPORTED_FORMATS = 'PDF, Word (.docx), images, or text files'
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -68,7 +78,7 @@ export function validateFile(file: File, existing: Attachment[] = []): string | 
     return `You can attach up to ${MAX_FILES} files at a time.`
   }
   if (!resolveMimeType(file)) {
-    return `${file.name} isn't a supported file. Attach a PDF, image, or text file.`
+    return `${file.name} isn't a supported file. Attach a ${SUPPORTED_FORMATS}.`
   }
   if (file.size === 0) {
     return `${file.name} is empty.`
@@ -83,19 +93,45 @@ export function validateFile(file: File, existing: Attachment[] = []): string | 
   return null
 }
 
-/** Read a validated file into a base64 attachment. */
+async function toBase64(blob: Blob, label: string): Promise<string> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error(`Could not read ${label}.`))
+    reader.onload = () => resolve(String(reader.result))
+    reader.readAsDataURL(blob)
+  })
+  // readAsDataURL yields "data:<mime>;base64,<payload>".
+  return dataUrl.slice(dataUrl.indexOf(',') + 1)
+}
+
+/** Read a validated file into a base64 attachment the model can actually read. */
 export async function toAttachment(file: File): Promise<Attachment> {
   const mimeType = resolveMimeType(file)
   if (!mimeType) throw new Error(`${file.name} isn't a supported file type.`)
 
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error(`Could not read ${file.name}.`))
-    reader.onload = () => resolve(String(reader.result))
-    reader.readAsDataURL(file)
-  })
+  if (mimeType === DOCX_MIME) {
+    // Gemini has no reader for Word's zipped XML, so pull the text out here and
+    // send that. Imported on demand: most attachments are PDFs or photos and
+    // shouldn't pay for the converter in the main bundle.
+    const { extractRawText } = await import('mammoth')
+    const { value } = await extractRawText({ arrayBuffer: await file.arrayBuffer() })
+    const text = value.trim()
+    if (!text) {
+      throw new Error(`${file.name} has no readable text — if it's scanned pages, attach a PDF.`)
+    }
+    const blob = new Blob([text], { type: 'text/plain' })
+    return {
+      name: file.name,
+      mimeType: 'text/plain',
+      size: blob.size,
+      data: await toBase64(blob, file.name),
+    }
+  }
 
-  // readAsDataURL yields "data:<mime>;base64,<payload>".
-  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1)
-  return { name: file.name, mimeType, size: file.size, data: base64 }
+  return {
+    name: file.name,
+    mimeType,
+    size: file.size,
+    data: await toBase64(file, file.name),
+  }
 }
