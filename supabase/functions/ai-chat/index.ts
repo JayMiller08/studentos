@@ -15,9 +15,9 @@ import { type ChatMessage, GeminiError, generate, isGeminiConfigured } from '../
 const BASE_RULES = `You are the StudentOS study coach for university students.
 Ground rules:
 - NEVER invent deadlines, dates, grades, assignments, tasks, events or notes. Only reference items listed in the "Student context" block; if a section says "none", say you don't have that rather than guessing.
-- The context block is a live snapshot of the student's real assignments, tasks, calendar and notes. Use it: name specific items when advising, and prefer their actual workload over generic study advice.
+- The "Student context" block is BACKGROUND, not the subject of the conversation. Draw on it when the student asks about their workload, schedule, priorities or what to work on. Never summarise, list or describe it when they asked about something else.
+- Answer the question the student actually asked. If they ask about a document, a concept or a topic, answer about THAT — do not pivot to their assignments and deadlines.
 - Note excerpts in the context are previews, not full notes. Never quiz or summarise from an excerpt alone — ask the student to attach the note or file.
-- When the student attaches files, work from those directly; they are the material they want help with.
 - Be concise, warm and practical. Prefer numbered steps and short paragraphs.
 - Encourage evidence-based techniques: active recall, spaced repetition, focused blocks.
 - If asked to do the student's graded work for them, help them learn it instead.
@@ -27,7 +27,7 @@ Ground rules:
 const MAX_ATTACHMENT_CHARS = 12 * 1024 * 1024
 
 const MODE_PROMPTS: Record<string, string> = {
-  coach: `${BASE_RULES}\nRole: personal study coach. Help plan, prioritize and stay accountable.`,
+  coach: `${BASE_RULES}\nRole: personal study coach. Help plan, prioritize and stay accountable — and answer whatever they actually ask, including questions about material or files they share.`,
   quiz: `${BASE_RULES}\nRole: quiz master. Turn the student's material into 5-8 exam-style questions of mixed difficulty. Put all answers at the end.`,
   flashcards: `${BASE_RULES}\nRole: flashcard builder. Produce concise Front/Back pairs (max 12) from the material. Fronts are questions or terms, backs are minimal answers.`,
   summary: `${BASE_RULES}\nRole: summarizer. Produce a tight summary: 3-sentence overview, then bullet key points, then key terms with one-line definitions.`,
@@ -72,7 +72,21 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Those attachments are too large. Send fewer or smaller files.' }, 413)
   }
 
-  const system = `${MODE_PROMPTS[mode] ?? MODE_PROMPTS.coach}\n\nStudent context:\n${studyContext || '(none provided)'}`
+  // Attachments are the subject of the turn that carries them. Said plainly
+  // and *before* the context block, because otherwise a large, emphatic
+  // workload snapshot wins and the model summarises the dashboard instead of
+  // the document the student just handed it.
+  const attachedNames = history.flatMap((message) => (message.files ?? []).map((f) => f.name))
+  const attachmentDirective =
+    attachedNames.length > 0
+      ? `\n\n=== ATTACHED FILES ===\nThe student has attached ${attachedNames.length} file(s): ${attachedNames.join(', ')}.
+These files are the subject of their request. Read them and answer from their contents.
+- Work ONLY from the attached files unless the student explicitly asks how they relate to their schedule.
+- Do NOT summarise or restate the "Student context" block below in your answer.
+- If a file is unreadable or empty, say so plainly instead of answering from anything else.`
+      : ''
+
+  const system = `${MODE_PROMPTS[mode] ?? MODE_PROMPTS.coach}${attachmentDirective}\n\n=== STUDENT CONTEXT (background only) ===\n${studyContext || '(none provided)'}`
 
   try {
     const reply = await generate({ system, messages: history, maxOutputTokens: 1500 })

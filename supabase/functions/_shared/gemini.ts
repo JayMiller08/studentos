@@ -8,9 +8,18 @@
  * Secrets: `supabase secrets set GEMINI_API_KEY=...`
  */
 
-const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
+/**
+ * Read through `globalThis` rather than the bare `Deno` global. Identical at
+ * runtime, but it keeps this module importable — and therefore testable — from
+ * the app's Node toolchain without declaring a fake `Deno` that app code could
+ * then reference by mistake.
+ */
+const denoEnv = (globalThis as { Deno?: { env: { get(key: string): string | undefined } } }).Deno
+  ?.env
+
+const GEMINI_API_KEY = denoEnv?.get('GEMINI_API_KEY')
 /** Flash is fast and cheap enough for per-message use; override per deployment. */
-const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash'
+const GEMINI_MODEL = denoEnv?.get('GEMINI_MODEL') ?? 'gemini-2.5-flash'
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
 
 export const isGeminiConfigured = Boolean(GEMINI_API_KEY)
@@ -87,21 +96,30 @@ export async function generate(options: GenerateOptions): Promise<string> {
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      system_instruction: { parts: [{ text: options.system }] },
+      // Canonical camelCase throughout. The proto-JSON parser also accepts
+      // snake_case, but mixing the two is how an `inline_data` block quietly
+      // goes missing — and a dropped attachment looks exactly like the model
+      // ignoring the file.
+      systemInstruction: { parts: [{ text: options.system }] },
       // Gemini names the assistant turn "model"; everything else is "user".
-      contents: messages.map((message) => ({
-        role: message.role === 'assistant' ? 'model' : 'user',
-        parts: [
-          { text: String(message.content).slice(0, 8000) },
+      contents: messages.map((message) => {
+        const text = String(message.content ?? '').slice(0, 8000)
+        const files =
           // Attachments ride alongside the text of the same turn. Only user
           // turns carry them; a model turn with inline data is rejected.
-          ...(message.role === 'user'
+          message.role === 'user'
             ? (message.files ?? []).map((file) => ({
-                inline_data: { mime_type: file.mimeType, data: file.data },
+                inlineData: { mimeType: file.mimeType, data: file.data },
               }))
-            : []),
-        ],
-      })),
+            : []
+        return {
+          role: message.role === 'assistant' ? 'model' : 'user',
+          // An empty text part is not just noise — it can make Gemini treat
+          // the turn as contentless and answer the system prompt instead. Send
+          // one only when there is something to send.
+          parts: text.trim() ? [{ text }, ...files] : files.length > 0 ? files : [{ text }],
+        }
+      }),
       generationConfig: {
         maxOutputTokens: options.maxOutputTokens ?? 1500,
         temperature: options.temperature ?? 0.7,
