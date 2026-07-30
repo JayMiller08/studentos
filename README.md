@@ -43,7 +43,7 @@ Recharts · Lucide · `@dnd-kit` · PWA (`vite-plugin-pwa`)
 
 **Backend** — Supabase (Postgres · Auth · Storage · Realtime · Edge Functions)
 
-**AI** — Anthropic Claude via a Supabase Edge Function (key stays server-side)
+**AI** — Google Gemini via Supabase Edge Functions (key stays server-side)
 
 **Payments** — Stripe, behind a swappable provider abstraction
 
@@ -125,16 +125,15 @@ implementation can be replaced in one place.
 See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the full runbook. In short:
 
 1. Create a Supabase project; set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-2. Push the schema: `supabase db push` (migrations in `supabase/migrations`).
+2. Push the schema: `npm run db:push` (migrations in `supabase/migrations`).
 3. Set server secrets and deploy edge functions:
    ```bash
-   supabase secrets set ANTHROPIC_API_KEY=… STRIPE_SECRET_KEY=… \
+   npx supabase secrets set GEMINI_API_KEY=… STRIPE_SECRET_KEY=… \
      STRIPE_WEBHOOK_SECRET=… STRIPE_PRICE_PRO_MONTHLY=… STRIPE_PRICE_ELITE_MONTHLY=…
-   supabase functions deploy ai-chat
-   supabase functions deploy billing
-   supabase functions deploy stripe-webhook --no-verify-jwt
-   supabase functions deploy send-reminders --no-verify-jwt
+   npm run functions:deploy
    ```
+   The CLI ships as a devDependency — `npm install` then `npx supabase …`
+   (Supabase does not support `npm i -g supabase`).
 4. Point a Stripe webhook at the `stripe-webhook` function.
 5. Deploy the frontend to Vercel with the same env vars per environment
    (Development / Preview / Production).
@@ -145,7 +144,7 @@ See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the full runbook. In short:
 
 - **Row Level Security** on every table — deny-by-default; the browser anon key
   can do nothing outside explicit per-user policies.
-- **No secrets in the browser.** The Anthropic and Stripe keys live only in
+- **No secrets in the browser.** The Gemini and Stripe keys live only in
   edge functions. The Stripe webhook is the *sole* source of subscription
   truth (signature-verified).
 - **Privilege-escalation guards** in RLS: users can't grant themselves `admin`

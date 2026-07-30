@@ -1,9 +1,15 @@
 import { addDays, addMonths, addWeeks, format, parseISO } from 'date-fns'
+import { assertCanCreate } from '@/lib/plans'
 import { toDateKey } from '@/lib/utils'
 import { byUser, table } from '@/services/db'
-import type { Priority, Task, TaskRecurrence, TaskStatus } from '@/types/models'
+import type { Plan, Priority, Task, TaskRecurrence, TaskStatus } from '@/types/models'
 
 const tasks = () => table<Task>('tasks')
+
+/** A task counts against the plan until it is done — finished work is free. */
+export function isUnfinishedTask(task: Task): boolean {
+  return task.status !== 'done'
+}
 
 export interface TaskInput {
   title: string
@@ -72,7 +78,9 @@ export const tasksService = {
     })
   },
 
-  async create(userId: string, input: TaskInput): Promise<Task> {
+  async create(userId: string, plan: Plan, input: TaskInput): Promise<Task> {
+    const existing = await tasksService.list(userId)
+    assertCanCreate(plan, 'tasks', existing.filter(isUnfinishedTask).length)
     return tasks().insert({
       user_id: userId,
       title: input.title,
@@ -107,6 +115,9 @@ export const tasksService = {
     })
 
     if (completed && task.recurrence && task.status !== 'done') {
+      // Deliberately uncapped: this swaps one finished task for its next
+      // occurrence, so the unfinished count is unchanged. Metering it would
+      // silently break recurrence for anyone sitting at their limit.
       const baseDate = task.scheduled_on ?? toDateKey(new Date())
       await tasks().insert({
         user_id: task.user_id,

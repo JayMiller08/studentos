@@ -32,7 +32,9 @@ import { useAssignments, useModules } from '@/features/assignments/hooks'
 import { useCalendarEvents } from '@/features/calendar/hooks'
 import { useStudySessions } from '@/features/focus/hooks'
 import { ModuleBadge } from '@/features/assignments/module-badge'
+import { PriorityBadge } from '@/features/assignments/priority-badge'
 import { useTasks, useToggleTask } from '@/features/planner/hooks'
+import { usePlan } from '@/hooks/use-plan'
 import { usePwaInstall } from '@/hooks/use-pwa-install'
 import { getMissingProfileFields } from '@/lib/profile-completeness'
 import { quoteOfTheDay } from '@/lib/quotes'
@@ -40,7 +42,7 @@ import { cn, formatDueDistance, formatMinutes, percent, todayKey } from '@/lib/u
 import { isActiveAssignment, isOverdue } from '@/services/assignments-service'
 import { calendarService } from '@/services/calendar-service'
 import { computeFocusStats } from '@/services/focus-service'
-import { rankAssignments } from '@/services/priority-engine'
+import { orderAssignments } from '@/services/priority-engine'
 
 function greeting(): string {
   const hour = new Date().getHours()
@@ -52,6 +54,8 @@ function greeting(): string {
 
 export function DashboardPage() {
   const { profile } = useAuth()
+  const { has } = usePlan()
+  const smartPrioritization = has('smartPrioritization')
   const { canInstall, promptInstall } = usePwaInstall()
   const { data: assignments = [] } = useAssignments()
   const { data: modules = [] } = useModules()
@@ -66,8 +70,13 @@ export function DashboardPage() {
   const moduleById = React.useMemo(() => new Map(modules.map((m) => [m.id, m])), [modules])
 
   const active = assignments.filter(isActiveAssignment)
-  const ranked = React.useMemo(() => rankAssignments(active), [active])
-  const topPriority = ranked[0]
+  const ordering = React.useMemo(
+    () => orderAssignments(active, { smart: smartPrioritization }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `active` is rebuilt each render from `assignments`
+    [assignments, smartPrioritization],
+  )
+  const topPriority = ordering.items[0]
+  const topReason = topPriority ? ordering.scoreById.get(topPriority.id) : undefined
 
   const todaysTasks = tasks
     .filter((task) => task.scheduled_on === todayKey())
@@ -141,6 +150,7 @@ export function DashboardPage() {
                   <ModuleBadge
                     module={topPriority.module_id ? moduleById.get(topPriority.module_id) : undefined}
                   />
+                  {topReason ? <PriorityBadge score={topReason} /> : null}
                   {isOverdue(topPriority) ? <Badge variant="destructive">Overdue</Badge> : null}
                 </div>
                 <h2 className="mt-1 text-lg font-semibold">{topPriority.title}</h2>
@@ -157,6 +167,15 @@ export function DashboardPage() {
                   <Progress value={topPriority.progress} className="h-1.5 max-w-56" />
                   <span className="text-muted-foreground text-xs">{topPriority.progress}%</span>
                 </div>
+                {ordering.smart ? null : (
+                  <p className="text-muted-foreground mt-2 text-xs">
+                    Picked by due date.{' '}
+                    <Link to="/app/billing" className="text-primary font-medium hover:underline">
+                      Smart prioritization
+                    </Link>{' '}
+                    also weighs grade impact and work left.
+                  </p>
+                )}
               </div>
               <div className="flex shrink-0 gap-2">
                 <Button asChild>

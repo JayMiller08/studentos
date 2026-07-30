@@ -55,7 +55,9 @@ export const profileService = {
       longest_streak: 0,
       last_active_date: null,
       onboarding_completed: false,
-      tour_completed: false,
+      // `tour_completed` is deliberately not written: it is the legacy 00006
+      // flag, superseded by `tours_seen`, and a project that only ran 00007
+      // has no such column. Writing it would fail the insert (42703).
       tours_seen: [],
       tour_replay_hint: false,
       notification_prefs: DEFAULT_NOTIFICATION_PREFS,

@@ -17,6 +17,14 @@ export const COACH_MODES: Array<{ id: CoachMode; label: string; hint: string }> 
 const conversations = () => table<AIConversation>('ai_conversations')
 const messages = () => table<AIMessage>('ai_messages')
 
+/** One turn of the conversation, optionally carrying files for that message. */
+export interface CoachTurn {
+  role: 'user' | 'assistant'
+  content: string
+  /** Base64 files sent with this turn; never persisted to `ai_messages`. */
+  files?: Array<{ name: string; mimeType: string; data: string }>
+}
+
 export const aiService = {
   async listConversations(userId: string): Promise<AIConversation[]> {
     return conversations().list({
@@ -64,49 +72,90 @@ export const aiService = {
 
   /**
    * Get the assistant reply. With Supabase configured this calls the
-   * `ai-chat` Edge Function (which holds the Anthropic key server-side and
+   * `ai-chat` Edge Function (which holds the Gemini key server-side and
    * enforces plan limits). In local demo mode a deterministic, rule-based
    * coach answers so the feature still works offline.
    */
   async getReply(input: {
     mode: CoachMode
-    history: Array<{ role: 'user' | 'assistant'; content: string }>
+    history: CoachTurn[]
     studyContext: string
   }): Promise<string> {
     if (supabase) {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const token = sessionData.session?.access_token
-      if (!token) throw new Error('You need to be signed in to use the AI coach.')
-
-      const response = await fetch(`${env.supabaseUrl}/functions/v1/ai-chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          mode: input.mode,
-          messages: input.history.slice(-20),
-          studyContext: input.studyContext,
-        }),
+      const body = await callFunction<{ reply: string }>('ai-chat', {
+        mode: input.mode,
+        messages: input.history.slice(-20),
+        studyContext: input.studyContext,
       })
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { error?: string } | null
-        throw new Error(body?.error ?? `AI request failed (${response.status})`)
-      }
-      const body = (await response.json()) as { reply: string }
       return body.reply
     }
 
     const lastUser = [...input.history].reverse().find((message) => message.role === 'user')
+    if (lastUser?.files?.length) {
+      return `The offline coach can't read attachments — it has no model behind it. Connect Supabase and set a Gemini key to send files.${OFFLINE_NOTE}`
+    }
     return offlineCoach(input.mode, lastUser?.content ?? '', input.studyContext)
   },
+
+  /**
+   * Coaching notes for an already-computed study plan.
+   *
+   * The schedule stays deterministic — this only narrates it. Returns null
+   * when AI is unavailable (demo mode, no key, a failed call), and the planner
+   * keeps its own rule-based recommendations, so a plan is never blocked on
+   * the network.
+   */
+  async getPlanNotes(plan: StudyPlanRequest): Promise<string[] | null> {
+    if (!supabase) return null
+    try {
+      const body = await callFunction<{ notes?: string[] }>('ai-plan', plan)
+      const notes = (body.notes ?? []).filter((note) => note.trim().length > 0)
+      return notes.length > 0 ? notes : null
+    } catch (error) {
+      console.warn('[ai-plan] falling back to rule-based recommendations', error)
+      return null
+    }
+  },
+}
+
+export interface StudyPlanRequest {
+  horizonDays: number
+  dailyCapacityMinutes: number
+  stressLevel: number
+  unscheduledMinutes: number
+  days: Array<{
+    date: string
+    minutes: number
+    heavy: boolean
+    blocks: Array<{ title: string; minutes: number; reason: string }>
+  }>
+}
+
+/** POST to an Edge Function with the caller's JWT, surfacing its error text. */
+async function callFunction<T>(name: string, payload: unknown): Promise<T> {
+  const { data: sessionData } = await supabase!.auth.getSession()
+  const token = sessionData.session?.access_token
+  if (!token) throw new Error('You need to be signed in to use AI features.')
+
+  const response = await fetch(`${env.supabaseUrl}/functions/v1/${name}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null
+    throw new Error(body?.error ?? `AI request failed (${response.status})`)
+  }
+  return (await response.json()) as T
 }
 
 // ── Offline (rule-based) coach ─────────────────────────────────────────────
 
 const OFFLINE_NOTE =
-  '\n\n---\n*Offline coach (rule-based). Connect Supabase + an Anthropic key to unlock the full AI experience.*'
+  '\n\n---\n*Offline coach (rule-based). Connect Supabase + a Gemini key to unlock the full AI experience.*'
 
 function sentences(text: string): string[] {
   return text

@@ -1,5 +1,6 @@
+import { assertCanCreate } from '@/lib/plans'
 import { byUser, table } from '@/services/db'
-import type { Note, NoteFolder, NoteVersion } from '@/types/models'
+import type { Note, NoteFolder, NoteVersion, Plan } from '@/types/models'
 
 const notes = () => table<Note>('notes')
 const folders = () => table<NoteFolder>('note_folders')
@@ -34,7 +35,9 @@ export const notesService = {
     })
   },
 
-  async create(userId: string, folderId: string | null): Promise<Note> {
+  async create(userId: string, plan: Plan, folderId: string | null): Promise<Note> {
+    const existing = await notesService.list(userId)
+    assertCanCreate(plan, 'notes', existing.length)
     return notes().insert({
       user_id: userId,
       folder_id: folderId,

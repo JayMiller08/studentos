@@ -1,5 +1,5 @@
 import { format, parseISO } from 'date-fns'
-import { CalendarCheck, Lightbulb, RefreshCw, Sparkles } from 'lucide-react'
+import { CalendarCheck, Lightbulb, Loader2, RefreshCw, Sparkles } from 'lucide-react'
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -26,6 +26,7 @@ import {
 import { useAssignments, useModules } from '@/features/assignments/hooks'
 import { useCreateTask, useTasks } from '@/features/planner/hooks'
 import { formatMinutes } from '@/lib/utils'
+import { aiService } from '@/services/ai-service'
 import { generateStudyPlan, type StudyPlan, type StudyPlanDay } from '@/services/study-planner'
 
 function DayCard({
@@ -90,60 +91,164 @@ function DayCard({
   )
 }
 
+interface PlannerSettings {
+  /** Horizon in days, kept as a string to match the Select's value. */
+  horizon: string
+  capacityMinutes: number
+  /** 0–100; scaled to the engine's 0–1 stress level. */
+  stress: number
+}
+
+const SETTINGS_KEY = 'studentos.smart-plan.settings'
+const DEFAULT_SETTINGS: PlannerSettings = { horizon: '7', capacityMinutes: 180, stress: 50 }
+
+function loadSettings(): PlannerSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY)
+    // Spread over defaults so a stored blob from an older shape still loads.
+    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS
+  } catch {
+    return DEFAULT_SETTINGS
+  }
+}
+
+function saveSettings(settings: PlannerSettings): void {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+  } catch {
+    // Private browsing or a full quota — planning still works, it just forgets.
+  }
+}
+
 export function SmartPlanPage() {
   const { data: assignments = [] } = useAssignments()
   const { data: modules = [] } = useModules()
   const { data: tasks = [] } = useTasks()
   const createTask = useCreateTask()
 
-  const [horizon, setHorizon] = React.useState('7')
-  const [capacityMinutes, setCapacityMinutes] = React.useState(180)
-  const [stress, setStress] = React.useState(50)
+  const [settings, setSettings] = React.useState<PlannerSettings>(loadSettings)
+  const { horizon, capacityMinutes, stress } = settings
   const [plan, setPlan] = React.useState<StudyPlan | null>(null)
   const [appliedDays, setAppliedDays] = React.useState<Set<string>>(new Set())
+  const [applying, setApplying] = React.useState(false)
+  /** Gemini-written notes for the current plan; null falls back to rule-based. */
+  const [aiNotes, setAiNotes] = React.useState<string[] | null>(null)
+  const [notesLoading, setNotesLoading] = React.useState(false)
+
+  // Re-entering your real capacity every visit is friction; remember it.
+  React.useEffect(() => {
+    saveSettings(settings)
+  }, [settings])
 
   const moduleColor = React.useCallback(
     (moduleId: string | null) => modules.find((m) => m.id === moduleId)?.color,
     [modules],
   )
 
+  const summary = React.useMemo(() => {
+    if (!plan) return null
+    const totalMinutes = plan.days.reduce((sum, day) => sum + day.totalMinutes, 0)
+    return {
+      totalMinutes,
+      activeDays: plan.days.filter((day) => day.totalMinutes > 0).length,
+      blocks: plan.days.reduce((sum, day) => sum + day.blocks.length, 0),
+      assignmentsCovered: new Set(
+        plan.days.flatMap((day) => day.blocks.map((block) => block.assignmentId)),
+      ).size,
+    }
+  }, [plan])
+
+  const unappliedDays = plan?.days.filter(
+    (day) => day.blocks.length > 0 && !appliedDays.has(day.dateKey),
+  )
+
   function generate() {
-    setPlan(
-      generateStudyPlan(assignments, {
+    const next = generateStudyPlan(assignments, {
+      horizonDays: Number(horizon),
+      dailyCapacityMinutes: capacityMinutes,
+      stressLevel: stress / 100,
+    })
+    setPlan(next)
+    setAppliedDays(new Set())
+    setAiNotes(null)
+    void loadNotes(next)
+  }
+
+  /**
+   * Ask the coach to narrate the plan. The schedule above is already final —
+   * this only adds guidance, and `getPlanNotes` resolves to null rather than
+   * throwing, so a missing key or a dead network just leaves the rule-based
+   * recommendations in place.
+   */
+  async function loadNotes(next: StudyPlan) {
+    setNotesLoading(true)
+    try {
+      const notes = await aiService.getPlanNotes({
         horizonDays: Number(horizon),
         dailyCapacityMinutes: capacityMinutes,
         stressLevel: stress / 100,
-      }),
-    )
-    setAppliedDays(new Set())
+        unscheduledMinutes: next.unscheduledMinutes,
+        days: next.days.map((day) => ({
+          date: day.dateKey,
+          minutes: day.totalMinutes,
+          heavy: day.heavy,
+          blocks: day.blocks.map((block) => ({
+            title: block.title,
+            minutes: block.minutes,
+            reason: block.reason,
+          })),
+        })),
+      })
+      setAiNotes(notes)
+    } finally {
+      setNotesLoading(false)
+    }
   }
 
-  async function applyDay(day: StudyPlanDay) {
-    // Skip blocks already materialized for that day (idempotent apply).
-    const existingTitles = new Set(
-      tasks.filter((t) => t.scheduled_on === day.dateKey).map((t) => t.title),
-    )
-    let created = 0
-    for (const block of day.blocks) {
-      const title = `Study: ${block.title}`
-      if (existingTitles.has(title)) continue
-      await createTask.mutateAsync({
-        title,
-        scheduled_on: day.dateKey,
-        duration_minutes: block.minutes,
-        estimated_minutes: block.minutes,
-        priority: 'high',
-        assignment_id: block.assignmentId,
-        module_id: block.moduleId,
-      })
-      created += 1
+  /**
+   * Materialize plan days as real planner tasks. Idempotent: a block whose
+   * task already exists for that day is skipped, so applying a day twice — or
+   * applying the whole plan after a single day — never duplicates work.
+   */
+  async function applyDays(days: StudyPlanDay[]) {
+    const titlesByDay = new Map<string, Set<string>>()
+    for (const task of tasks) {
+      if (!task.scheduled_on) continue
+      const set = titlesByDay.get(task.scheduled_on) ?? new Set<string>()
+      set.add(task.title)
+      titlesByDay.set(task.scheduled_on, set)
     }
-    setAppliedDays((prev) => new Set(prev).add(day.dateKey))
-    toast.success(
-      created > 0
-        ? `${created} study block${created === 1 ? '' : 's'} added to your planner`
-        : 'Those blocks are already in your planner',
-    )
+
+    setApplying(true)
+    let created = 0
+    try {
+      for (const day of days) {
+        const existing = titlesByDay.get(day.dateKey) ?? new Set<string>()
+        for (const block of day.blocks) {
+          const title = `Study: ${block.title}`
+          if (existing.has(title)) continue
+          await createTask.mutateAsync({
+            title,
+            scheduled_on: day.dateKey,
+            duration_minutes: block.minutes,
+            estimated_minutes: block.minutes,
+            priority: 'high',
+            assignment_id: block.assignmentId,
+            module_id: block.moduleId,
+          })
+          existing.add(title)
+          created += 1
+        }
+      }
+      setAppliedDays((prev) => new Set([...prev, ...days.map((day) => day.dateKey)]))
+      toast.success(
+        created > 0
+          ? `${created} study block${created === 1 ? '' : 's'} added to your planner`
+          : 'Those blocks are already in your planner',
+      )
+    } finally {
+      setApplying(false)
+    }
   }
 
   return (
@@ -154,9 +259,9 @@ export function SmartPlanPage() {
       />
 
       <PlanGate
-        feature="smartPrioritization"
-        title="Smart planning is a Student Pro feature"
-        description="Upgrade to generate day-by-day study schedules from your assignments, weighted by deadlines, grade impact and difficulty."
+        feature="aiPlanner"
+        title="The AI study planner is a Student Pro feature"
+        description="Upgrade to turn your assignments into a day-by-day study schedule weighted by deadlines, grade impact and difficulty — then send it straight to your planner."
       >
         <Card data-tour="plan-settings">
           <CardHeader>
@@ -170,7 +275,10 @@ export function SmartPlanPage() {
           <CardContent className="grid gap-5 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="plan-horizon">Plan for</Label>
-              <Select value={horizon} onValueChange={setHorizon}>
+              <Select
+                value={horizon}
+                onValueChange={(value) => setSettings((s) => ({ ...s, horizon: value }))}
+              >
                 <SelectTrigger id="plan-horizon" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -193,7 +301,9 @@ export function SmartPlanPage() {
                 max={480}
                 step={30}
                 value={capacityMinutes}
-                onChange={(event) => setCapacityMinutes(Number(event.target.value))}
+                onChange={(event) =>
+                  setSettings((s) => ({ ...s, capacityMinutes: Number(event.target.value) }))
+                }
                 className="accent-primary h-2 w-full cursor-pointer"
               />
             </div>
@@ -208,7 +318,9 @@ export function SmartPlanPage() {
                 max={100}
                 step={10}
                 value={stress}
-                onChange={(event) => setStress(Number(event.target.value))}
+                onChange={(event) =>
+                  setSettings((s) => ({ ...s, stress: Number(event.target.value) }))
+                }
                 className="accent-primary h-2 w-full cursor-pointer"
               />
               <p className="text-muted-foreground text-xs">
@@ -225,19 +337,61 @@ export function SmartPlanPage() {
 
         {plan ? (
           <>
-            {plan.recommendations.length > 0 ? (
+            {summary ? (
+              <Card className="border-primary/25 bg-primary/5">
+                <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <dl className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
+                    {[
+                      { label: 'Planned study', value: formatMinutes(summary.totalMinutes) },
+                      { label: 'Study days', value: String(summary.activeDays) },
+                      { label: 'Focus blocks', value: String(summary.blocks) },
+                      { label: 'Assignments', value: String(summary.assignmentsCovered) },
+                    ].map((stat) => (
+                      <div key={stat.label}>
+                        <dt className="text-muted-foreground text-xs">{stat.label}</dt>
+                        <dd className="text-lg font-semibold">{stat.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <Button
+                    className="shrink-0"
+                    disabled={applying || !unappliedDays?.length}
+                    onClick={() => void applyDays(unappliedDays ?? [])}
+                  >
+                    <CalendarCheck />
+                    {unappliedDays?.length
+                      ? `Apply all ${unappliedDays.length} days`
+                      : 'Whole plan applied'}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {notesLoading || plan.recommendations.length > 0 || aiNotes ? (
               <Card className="bg-secondary/40">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Lightbulb aria-hidden className="text-warning size-4" /> Coach notes
+                    {aiNotes ? (
+                      <Badge variant="secondary" className="gap-1">
+                        <Sparkles aria-hidden className="size-3" /> AI
+                      </Badge>
+                    ) : null}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="list-disc space-y-1.5 pl-5 text-sm">
-                    {plan.recommendations.map((recommendation) => (
-                      <li key={recommendation}>{recommendation}</li>
-                    ))}
-                  </ul>
+                  {notesLoading ? (
+                    <p className="text-muted-foreground flex items-center gap-2 text-sm">
+                      <Loader2 aria-hidden className="size-4 animate-spin" />
+                      Writing notes on your plan…
+                    </p>
+                  ) : (
+                    <ul className="list-disc space-y-1.5 pl-5 text-sm">
+                      {(aiNotes ?? plan.recommendations).map((note) => (
+                        <li key={note}>{note}</li>
+                      ))}
+                    </ul>
+                  )}
                 </CardContent>
               </Card>
             ) : null}
@@ -248,7 +402,7 @@ export function SmartPlanPage() {
                   key={day.dateKey}
                   day={day}
                   moduleColor={moduleColor}
-                  onApply={(d) => void applyDay(d)}
+                  onApply={(d) => void applyDays([d])}
                   applied={appliedDays.has(day.dateKey)}
                 />
               ))}

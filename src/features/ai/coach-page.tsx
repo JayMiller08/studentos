@@ -1,7 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bot, Loader2, MessageSquarePlus, Send, Trash2 } from 'lucide-react'
+import {
+  AlertTriangle,
+  Bot,
+  Loader2,
+  MessageSquarePlus,
+  Paperclip,
+  RotateCcw,
+  Send,
+  Trash2,
+  X,
+} from 'lucide-react'
 import * as React from 'react'
 import ReactMarkdown from 'react-markdown'
+import { toast } from 'sonner'
 import { useAuth } from '@/app/providers/auth-provider'
 import { PageHeader } from '@/components/page-header'
 import { PlanGate } from '@/components/plan-gate'
@@ -10,11 +21,23 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
-import { useAssignments } from '@/features/assignments/hooks'
+import { useAssignments, useModules } from '@/features/assignments/hooks'
+import { useCalendarEvents } from '@/features/calendar/hooks'
+import { useNotes } from '@/features/notes/hooks'
+import { useTasks } from '@/features/planner/hooks'
+import { usePlan } from '@/hooks/use-plan'
+import {
+  type Attachment,
+  ATTACHMENT_ACCEPT,
+  formatBytes,
+  MAX_FILES,
+  toAttachment,
+  validateFile,
+} from '@/lib/attachments'
 import { queryKeys } from '@/lib/query-keys'
-import { cn, formatDueDistance, getInitials } from '@/lib/utils'
-import { aiService, COACH_MODES, type CoachMode } from '@/services/ai-service'
-import { rankAssignments } from '@/services/priority-engine'
+import { cn, getInitials } from '@/lib/utils'
+import { aiService, COACH_MODES, type CoachMode, type CoachTurn } from '@/services/ai-service'
+import { buildStudyContext } from '@/services/study-context'
 import type { AIConversation } from '@/types/models'
 
 function useConversations() {
@@ -24,6 +47,17 @@ function useConversations() {
     queryFn: () => aiService.listConversations(user!.id),
     enabled: Boolean(user),
   })
+}
+
+/**
+ * What gets written to `ai_messages`. Attachment bytes are deliberately not
+ * stored — a semester of lecture PDFs does not belong in Postgres — so the
+ * saved row keeps a filename marker and the thread still reads correctly.
+ */
+function storedContent(text: string, files: Attachment[]): string {
+  if (files.length === 0) return text
+  const list = files.map((file) => `📎 ${file.name}`).join('\n')
+  return text ? `${text}\n\n${list}` : list
 }
 
 function useMessages(conversationId: string | null) {
@@ -37,43 +71,100 @@ function useMessages(conversationId: string | null) {
 
 export function CoachPage() {
   const { user } = useAuth()
+  const { has } = usePlan()
+  const smartPrioritization = has('smartPrioritization')
   const queryClient = useQueryClient()
   const { data: conversationList = [] } = useConversations()
   const { data: assignments = [] } = useAssignments()
+  const { data: modules = [] } = useModules()
+  const { data: tasks = [] } = useTasks()
+  const { data: events = [] } = useCalendarEvents()
+  const { data: notes = [] } = useNotes()
 
   const [activeId, setActiveId] = React.useState<string | null>(null)
   const [mode, setMode] = React.useState<CoachMode>('coach')
   const [draft, setDraft] = React.useState('')
+  /** Last send whose reply failed, kept so the student can retry it. */
+  const [failedSend, setFailedSend] = React.useState<{
+    text: string
+    conversation: AIConversation
+    files: Attachment[]
+  } | null>(null)
+  /** Files staged for the next message; cleared once it is sent. */
+  const [attachments, setAttachments] = React.useState<Attachment[]>([])
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null)
   const scrollRef = React.useRef<HTMLDivElement | null>(null)
+
+  async function addFiles(fileList: FileList | null) {
+    if (!fileList?.length) return
+    // Validate against the running total so four small files and one huge one
+    // are judged the same way.
+    let staged = attachments
+    for (const file of Array.from(fileList)) {
+      const problem = validateFile(file, staged)
+      if (problem) {
+        toast.error(problem)
+        continue
+      }
+      try {
+        staged = [...staged, await toAttachment(file)]
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : `Could not read ${file.name}.`)
+      }
+    }
+    setAttachments(staged)
+  }
 
   const activeConversation = conversationList.find((c) => c.id === activeId) ?? null
   const { data: messageList = [] } = useMessages(activeId)
 
-  // Real deadlines only — this is what keeps the coach honest.
-  const studyContext = React.useMemo(() => {
-    const active = assignments.filter(
-      (a) => a.status === 'not_started' || a.status === 'in_progress',
-    )
-    return rankAssignments(active)
-      .slice(0, 6)
-      .map(
-        (a) =>
-          `- "${a.title}" — ${formatDueDistance(a.due_at)}, ${a.progress}% done, weight ${a.weight}%, est ${Math.round(a.estimated_minutes / 60)}h`,
-      )
-      .join('\n')
-  }, [assignments])
+  // A live, bounded snapshot of everything the student is actually juggling.
+  // Real data only — this is what keeps the coach honest.
+  const studyContext = React.useMemo(
+    () =>
+      buildStudyContext({
+        assignments,
+        tasks,
+        events,
+        notes,
+        modules,
+        smart: smartPrioritization,
+      }),
+    [assignments, tasks, events, notes, modules, smartPrioritization],
+  )
 
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [messageList.length])
 
   const sendMessage = useMutation({
-    mutationFn: async ({ text, conversation }: { text: string; conversation: AIConversation }) => {
-      await aiService.appendMessage(user!.id, conversation.id, 'user', text)
-      const history = [
-        ...messageList.map((m) => ({ role: m.role, content: m.content })),
-        { role: 'user' as const, content: text },
-      ]
+    mutationFn: async ({
+      text,
+      conversation,
+      files,
+    }: {
+      text: string
+      conversation: AIConversation
+      files: Attachment[]
+    }) => {
+      // Read the thread fresh — the rendered copy lags behind a retry, and
+      // sending stale history would ask the model to answer twice.
+      const existing = await aiService.listMessages(user!.id, conversation.id)
+      const last = existing[existing.length - 1]
+      // Attachments are not stored, so the saved message carries a filename
+      // marker; match on that to recognise an already-saved retry.
+      const stored = storedContent(text, files)
+      const alreadySaved = last?.role === 'user' && last.content === stored
+
+      if (!alreadySaved) {
+        await aiService.appendMessage(user!.id, conversation.id, 'user', stored)
+      }
+      const history: CoachTurn[] = existing.map((m) => ({ role: m.role, content: m.content }))
+      // Swap the stored marker row for the live turn, which is the only one
+      // carrying the actual file bytes.
+      if (alreadySaved) history.pop()
+      history.push({ role: 'user', content: text, files })
+
       const reply = await aiService.getReply({
         mode: conversation.mode,
         history,
@@ -84,6 +175,8 @@ export function CoachPage() {
         await aiService.renameConversation(conversation.id, text.slice(0, 48))
       }
     },
+    onSuccess: () => setFailedSend(null),
+    onError: (_error, variables) => setFailedSend(variables),
     onSettled: (_data, _error, variables) => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.aiMessages(user!.id, variables.conversation.id),
@@ -94,16 +187,30 @@ export function CoachPage() {
 
   async function handleSend() {
     const text = draft.trim()
-    if (!text || sendMessage.isPending) return
-    setDraft('')
+    const files = attachments
+    // A bare attachment with no question is a legitimate send ("here, quiz me").
+    if ((!text && files.length === 0) || sendMessage.isPending) return
 
-    let conversation = activeConversation
-    if (!conversation) {
-      conversation = await aiService.createConversation(user!.id, mode)
-      setActiveId(conversation.id)
-      void queryClient.invalidateQueries({ queryKey: queryKeys.aiConversations(user!.id) })
+    try {
+      let conversation = activeConversation
+      if (!conversation) {
+        conversation = await aiService.createConversation(user!.id, mode)
+        setActiveId(conversation.id)
+        void queryClient.invalidateQueries({ queryKey: queryKeys.aiConversations(user!.id) })
+      }
+      // Clear only once the message is on its way to a real conversation, so a
+      // failure to even start one hands the words back.
+      setDraft('')
+      setAttachments([])
+      await sendMessage.mutateAsync({ text, conversation, files })
+    } catch {
+      // Starting the conversation failed, so nothing was saved and there is no
+      // thread to retry from — put the draft and files back. A failure *after*
+      // the message was stored is recoverable via the retry bar instead.
+      setDraft((current) => current || text)
+      setAttachments((current) => (current.length > 0 ? current : files))
+      // The reason surfaces through the global mutation toast.
     }
-    sendMessage.mutate({ text, conversation })
   }
 
   async function removeConversation(id: string) {
@@ -243,43 +350,112 @@ export function CoachPage() {
                     <Loader2 className="size-4 animate-spin" /> Thinking…
                   </div>
                 ) : null}
+                {failedSend && !sendMessage.isPending ? (
+                  <div
+                    role="alert"
+                    className="border-destructive/40 bg-destructive/5 flex flex-col items-start gap-2 rounded-xl border p-3 text-sm sm:flex-row sm:items-center"
+                  >
+                    <AlertTriangle aria-hidden className="text-destructive size-4 shrink-0" />
+                    <p className="flex-1">
+                      The coach couldn’t reply. Your message was saved — try again.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={() => sendMessage.mutate(failedSend)}
+                    >
+                      <RotateCcw /> Retry
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             </ScrollArea>
 
             <form
               data-tour="coach-composer"
-              className="flex items-end gap-2 border-t p-3"
+              className="border-t p-3"
               onSubmit={(event) => {
                 event.preventDefault()
                 void handleSend()
               }}
             >
-              <Textarea
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault()
-                    void handleSend()
+              {attachments.length > 0 ? (
+                <ul className="mb-2 flex flex-wrap gap-2">
+                  {attachments.map((file) => (
+                    <li
+                      key={`${file.name}-${file.size}`}
+                      className="bg-muted flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs"
+                    >
+                      <Paperclip aria-hidden className="size-3 shrink-0" />
+                      <span className="max-w-40 truncate">{file.name}</span>
+                      <span className="text-muted-foreground">{formatBytes(file.size)}</span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${file.name}`}
+                        className="text-muted-foreground hover:text-foreground"
+                        onClick={() =>
+                          setAttachments((current) => current.filter((f) => f !== file))
+                        }
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              <div className="flex items-end gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept={ATTACHMENT_ACCEPT}
+                  className="sr-only"
+                  onChange={(event) => {
+                    void addFiles(event.target.files)
+                    // Reset so picking the same file twice still fires onChange.
+                    event.target.value = ''
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  aria-label="Attach a file"
+                  title="Attach a PDF, image or text file"
+                  disabled={sendMessage.isPending || attachments.length >= MAX_FILES}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip />
+                </Button>
+                <Textarea
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault()
+                      void handleSend()
+                    }
+                  }}
+                  placeholder={
+                    mode === 'quiz' || mode === 'flashcards' || mode === 'summary'
+                      ? 'Paste or attach your notes…'
+                      : 'Ask anything about your studies…'
                   }
-                }}
-                placeholder={
-                  mode === 'quiz' || mode === 'flashcards' || mode === 'summary'
-                    ? 'Paste your notes or material here…'
-                    : 'Ask anything about your studies…'
-                }
-                aria-label="Message the study coach"
-                className="max-h-40 min-h-11"
-                rows={1}
-              />
-              <Button
-                type="submit"
-                size="icon"
-                aria-label="Send message"
-                disabled={!draft.trim() || sendMessage.isPending}
-              >
-                <Send />
-              </Button>
+                  aria-label="Message the study coach"
+                  className="max-h-40 min-h-11"
+                  rows={1}
+                />
+                <Button
+                  type="submit"
+                  size="icon"
+                  aria-label="Send message"
+                  disabled={(!draft.trim() && attachments.length === 0) || sendMessage.isPending}
+                >
+                  <Send />
+                </Button>
+              </div>
             </form>
           </Card>
         </div>

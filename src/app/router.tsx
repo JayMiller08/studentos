@@ -1,14 +1,15 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom'
 import { RedirectIfAuthenticated, RequireAdmin, RequireAuth } from '@/app/guards'
 import { AppLayout } from '@/app/layouts/app-layout'
 import { AuthLayout } from '@/app/layouts/auth-layout'
 import { NotFoundPage } from '@/app/pages/not-found-page'
+import { RouteError, RouteFallback } from '@/app/route-states'
 
 /**
  * Route table. Feature pages are lazy-loaded so each area of the product is
  * its own chunk; the app shell stays tiny.
  */
-export const router = createBrowserRouter([
+const routes: RouteObject[] = [
   {
     path: '/',
     lazy: async () => {
@@ -252,4 +253,16 @@ export const router = createBrowserRouter([
   },
 
   { path: '*', element: <NotFoundPage /> },
+]
+
+export const router = createBrowserRouter([
+  {
+    // Pathless root. Every feature page is code-split, so React Router needs a
+    // HydrateFallback here (it warns on each load without one) and an
+    // errorElement — route errors never reach the top-level <ErrorBoundary>,
+    // because the router catches them first and renders its own screen.
+    hydrateFallbackElement: <RouteFallback />,
+    errorElement: <RouteError />,
+    children: routes,
+  },
 ])

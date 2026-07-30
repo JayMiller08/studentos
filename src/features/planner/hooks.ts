@@ -19,10 +19,11 @@ export function useTasks() {
 }
 
 export function useCreateTask() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: TaskInput) => tasksService.create(user!.id, input),
+    mutationFn: (input: TaskInput) =>
+      tasksService.create(user!.id, profile?.plan ?? 'free', input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user!.id) })
     },

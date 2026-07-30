@@ -33,6 +33,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useModules } from '@/features/assignments/hooks'
 import { useCreateTask, useUpdateTask } from '@/features/planner/hooks'
 import { optionalNumberField } from '@/lib/forms'
+import { PlanLimitError } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 import type { Task, TaskRecurrence } from '@/types/models'
 
@@ -66,6 +67,8 @@ interface TaskFormDialogProps {
   task?: Task | null
   /** Prefill for creation, e.g. the planner's visible day. */
   defaultDate?: string | null
+  /** Called when the plan's task quota blocked the create. */
+  onLimitReached?: () => void
 }
 
 function minutesToTime(minutes: number | null): string {
@@ -82,7 +85,13 @@ function timeToMinutes(time: string): number | null {
   return h * 60 + m
 }
 
-export function TaskFormDialog({ open, onOpenChange, task, defaultDate }: TaskFormDialogProps) {
+export function TaskFormDialog({
+  open,
+  onOpenChange,
+  task,
+  defaultDate,
+  onLimitReached,
+}: TaskFormDialogProps) {
   const { data: modules = [] } = useModules()
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
@@ -134,14 +143,22 @@ export function TaskFormDialog({ open, onOpenChange, task, defaultDate }: TaskFo
       recurrence,
     }
 
-    if (task) {
-      await updateTask.mutateAsync({ id: task.id, patch: payload })
-      toast.success('Task updated')
-    } else {
-      await createTask.mutateAsync(payload)
-      toast.success('Task added')
+    try {
+      if (task) {
+        await updateTask.mutateAsync({ id: task.id, patch: payload })
+        toast.success('Task updated')
+      } else {
+        await createTask.mutateAsync(payload)
+        toast.success('Task added')
+      }
+      onOpenChange(false)
+    } catch (error) {
+      if (error instanceof PlanLimitError) {
+        onOpenChange(false)
+        onLimitReached?.()
+      }
+      // Other errors surface via the global mutation toast.
     }
-    onOpenChange(false)
   }
 
   const busy = createTask.isPending || updateTask.isPending
