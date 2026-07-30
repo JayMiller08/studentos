@@ -15,9 +15,18 @@ const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
 
 export const isGeminiConfigured = Boolean(GEMINI_API_KEY)
 
+export interface InlineFile {
+  name: string
+  mimeType: string
+  /** Base64, no `data:` prefix. */
+  data: string
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+  /** Files sent with this turn (PDF, image or text) — user turns only. */
+  files?: InlineFile[]
 }
 
 /** Carries an HTTP status so callers can pass a sensible code to the client. */
@@ -82,7 +91,16 @@ export async function generate(options: GenerateOptions): Promise<string> {
       // Gemini names the assistant turn "model"; everything else is "user".
       contents: messages.map((message) => ({
         role: message.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: String(message.content).slice(0, 8000) }],
+        parts: [
+          { text: String(message.content).slice(0, 8000) },
+          // Attachments ride alongside the text of the same turn. Only user
+          // turns carry them; a model turn with inline data is rejected.
+          ...(message.role === 'user'
+            ? (message.files ?? []).map((file) => ({
+                inline_data: { mime_type: file.mimeType, data: file.data },
+              }))
+            : []),
+        ],
       })),
       generationConfig: {
         maxOutputTokens: options.maxOutputTokens ?? 1500,

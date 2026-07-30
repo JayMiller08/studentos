@@ -17,6 +17,14 @@ export const COACH_MODES: Array<{ id: CoachMode; label: string; hint: string }> 
 const conversations = () => table<AIConversation>('ai_conversations')
 const messages = () => table<AIMessage>('ai_messages')
 
+/** One turn of the conversation, optionally carrying files for that message. */
+export interface CoachTurn {
+  role: 'user' | 'assistant'
+  content: string
+  /** Base64 files sent with this turn; never persisted to `ai_messages`. */
+  files?: Array<{ name: string; mimeType: string; data: string }>
+}
+
 export const aiService = {
   async listConversations(userId: string): Promise<AIConversation[]> {
     return conversations().list({
@@ -70,7 +78,7 @@ export const aiService = {
    */
   async getReply(input: {
     mode: CoachMode
-    history: Array<{ role: 'user' | 'assistant'; content: string }>
+    history: CoachTurn[]
     studyContext: string
   }): Promise<string> {
     if (supabase) {
@@ -83,6 +91,9 @@ export const aiService = {
     }
 
     const lastUser = [...input.history].reverse().find((message) => message.role === 'user')
+    if (lastUser?.files?.length) {
+      return `The offline coach can't read attachments — it has no model behind it. Connect Supabase and set a Gemini key to send files.${OFFLINE_NOTE}`
+    }
     return offlineCoach(input.mode, lastUser?.content ?? '', input.studyContext)
   },
 

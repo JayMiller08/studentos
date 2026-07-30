@@ -14,11 +14,17 @@ import { type ChatMessage, GeminiError, generate, isGeminiConfigured } from '../
 
 const BASE_RULES = `You are the StudentOS study coach for university students.
 Ground rules:
-- NEVER invent deadlines, dates, grades or assignments. Only reference items listed in the "Student context" block; if it is empty, say you don't have their schedule.
+- NEVER invent deadlines, dates, grades, assignments, tasks, events or notes. Only reference items listed in the "Student context" block; if a section says "none", say you don't have that rather than guessing.
+- The context block is a live snapshot of the student's real assignments, tasks, calendar and notes. Use it: name specific items when advising, and prefer their actual workload over generic study advice.
+- Note excerpts in the context are previews, not full notes. Never quiz or summarise from an excerpt alone — ask the student to attach the note or file.
+- When the student attaches files, work from those directly; they are the material they want help with.
 - Be concise, warm and practical. Prefer numbered steps and short paragraphs.
 - Encourage evidence-based techniques: active recall, spaced repetition, focused blocks.
 - If asked to do the student's graded work for them, help them learn it instead.
 - Reply in GitHub-flavored Markdown. Do not wrap the whole reply in a code fence.`
+
+/** ~12MB of base64, i.e. the client's 8MB raw cap plus encoding overhead. */
+const MAX_ATTACHMENT_CHARS = 12 * 1024 * 1024
 
 const MODE_PROMPTS: Record<string, string> = {
   coach: `${BASE_RULES}\nRole: personal study coach. Help plan, prioritize and stay accountable.`,
@@ -50,8 +56,21 @@ Deno.serve(async (req) => {
   const mode = typeof payload.mode === 'string' ? payload.mode : 'coach'
   const history = Array.isArray(payload.messages) ? payload.messages.slice(-20) : []
   if (history.length === 0) return jsonResponse({ error: 'No messages provided' }, 400)
+  // Roomy enough for the assignments/tasks/calendar/notes snapshot the client
+  // builds, which is itself capped per section.
   const studyContext =
-    typeof payload.studyContext === 'string' ? payload.studyContext.slice(0, 4000) : ''
+    typeof payload.studyContext === 'string' ? payload.studyContext.slice(0, 16000) : ''
+
+  // Defence in depth: the client caps attachments too, but that check runs in
+  // a browser the student controls.
+  const attachedBytes = history.reduce(
+    (sum, message) =>
+      sum + (message.files ?? []).reduce((inner, file) => inner + (file.data?.length ?? 0), 0),
+    0,
+  )
+  if (attachedBytes > MAX_ATTACHMENT_CHARS) {
+    return jsonResponse({ error: 'Those attachments are too large. Send fewer or smaller files.' }, 413)
+  }
 
   const system = `${MODE_PROMPTS[mode] ?? MODE_PROMPTS.coach}\n\nStudent context:\n${studyContext || '(none provided)'}`
 

@@ -43,7 +43,7 @@ import {
 } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
-import { useRealtimeTable } from '@/hooks/use-realtime'
+import { useNoteFolders, useNotes } from '@/features/notes/hooks'
 import { useAwardXp } from '@/hooks/use-award-xp'
 import { usePlan } from '@/hooks/use-plan'
 import { queryKeys } from '@/lib/query-keys'
@@ -78,21 +78,7 @@ function SyncStatus() {
 }
 
 function useNotesData() {
-  const { user } = useAuth()
-  const userId = user?.id
-  useRealtimeTable('notes', userId, userId ? queryKeys.notes(userId) : [])
-  useRealtimeTable('note_folders', userId, userId ? queryKeys.noteFolders(userId) : [])
-  const notes = useQuery({
-    queryKey: queryKeys.notes(userId ?? ''),
-    queryFn: () => notesService.list(userId!),
-    enabled: Boolean(userId),
-  })
-  const folders = useQuery({
-    queryKey: queryKeys.noteFolders(userId ?? ''),
-    queryFn: () => notesService.listFolders(userId!),
-    enabled: Boolean(userId),
-  })
-  return { notes, folders }
+  return { notes: useNotes(), folders: useNoteFolders() }
 }
 
 export function NotesPage() {
