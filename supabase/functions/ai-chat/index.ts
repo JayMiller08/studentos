@@ -35,7 +35,8 @@ const MODE_PROMPTS: Record<string, string> = {
   code: `${BASE_RULES}\nRole: programming tutor. Explain concepts and debug with the student. Prefer guiding questions and minimal corrected snippets over full solutions.`,
 }
 
-Deno.serve(async (req) => {
+// @ts-ignore
+Deno.serve(async (req: Request) => {
   const preflight = corsPreflight(req)
   if (preflight) return preflight
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
@@ -89,7 +90,7 @@ These files are the subject of their request. Read them and answer from their co
   const system = `${MODE_PROMPTS[mode] ?? MODE_PROMPTS.coach}${attachmentDirective}\n\n=== STUDENT CONTEXT (background only) ===\n${studyContext || '(none provided)'}`
 
   try {
-    const reply = await generate({ system, messages: history, maxOutputTokens: 1500 })
+    const reply = await generate({ system, messages: history, maxOutputTokens: 4096 })
     return jsonResponse({ reply })
   } catch (error) {
     if (error instanceof GeminiError) return jsonResponse({ error: error.message }, error.status)
