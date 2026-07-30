@@ -26,10 +26,20 @@ import { cn } from '@/lib/utils'
 
 const moduleSchema = z.object({
   name: z.string().trim().min(2, 'Module name is required').max(120),
-  code: z.string().trim().max(20),
+  // Required: the code is what identifies a module everywhere it is picked or
+  // badged, because full names are too long for those surfaces.
+  code: z
+    .string()
+    .trim()
+    .min(2, 'Module code is required')
+    .max(20)
+    // Codes are conventionally uppercase; normalising keeps the picker tidy
+    // and stops "csc2001" and "CSC2001" reading as two different modules.
+    .transform((code) => code.toUpperCase()),
   color: z.string(),
 })
-type ModuleValues = z.infer<typeof moduleSchema>
+/** Input side of the schema — what the fields hold before the transform. */
+type ModuleValues = z.input<typeof moduleSchema>
 
 interface ModulesDialogProps {
   open: boolean
@@ -42,15 +52,15 @@ export function ModulesDialog({ open, onOpenChange }: ModulesDialogProps) {
   const createModule = useCreateModule()
   const deleteModule = useDeleteModule()
 
-  const form = useForm<ModuleValues>({
+  const form = useForm({
     resolver: zodResolver(moduleSchema),
-    defaultValues: { name: '', code: '', color: MODULE_COLORS[0] },
+    defaultValues: { name: '', code: '', color: MODULE_COLORS[0] } satisfies ModuleValues,
   })
 
-  async function onSubmit(values: ModuleValues) {
+  async function onSubmit(values: z.output<typeof moduleSchema>) {
     await createModule.mutateAsync({
       name: values.name,
-      code: values.code || null,
+      code: values.code,
       color: values.color,
     })
     form.reset({ name: '', code: '', color: values.color })
