@@ -90,6 +90,9 @@ These files are the subject of their request. Read them and answer from their co
   const system = `${MODE_PROMPTS[mode] ?? MODE_PROMPTS.coach}${attachmentDirective}\n\n=== STUDENT CONTEXT (background only) ===\n${studyContext || '(none provided)'}`
 
   try {
+    // Reasoning is deducted from this ceiling (see THINKING_BUDGET), so the
+    // headroom here is what's actually left for prose — enough for a full
+    // document summary, a set of flashcards or a long essay critique.
     const reply = await generate({ system, messages: history, maxOutputTokens: 12288 })
     return jsonResponse({ reply })
   } catch (error) {

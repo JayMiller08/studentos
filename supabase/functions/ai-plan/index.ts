@@ -114,7 +114,13 @@ Deno.serve(async (req) => {
     const text = await generate({
       system: SYSTEM,
       messages: [{ role: 'user', content: formatPlan(plan) }],
-      maxOutputTokens: 700,
+      // Must comfortably exceed the thinking budget below: reasoning is
+      // deducted from this ceiling, and a plan that runs out mid-object yields
+      // unparseable JSON, which silently degrades to the rule-based notes.
+      maxOutputTokens: 2048,
+      // A handful of short notes needs far less deliberation than a tutoring
+      // answer, and every token spent here is one not spent on the notes.
+      thinkingBudget: 512,
       temperature: 0.6,
       responseMimeType: 'application/json',
     })

@@ -145,6 +145,82 @@ describe('the Gemini request body', () => {
   })
 })
 
+describe('the thinking budget', () => {
+  it('always caps reasoning, because it is deducted from maxOutputTokens', async () => {
+    // Left on "dynamic" the model can spend the whole ceiling reasoning about
+    // a long document and get cut off mid-answer.
+    const spy = stubFetch(replyWith('ok'))
+    await generate({ system: 's', messages: [{ role: 'user', content: 'q' }] })
+    const config = sentBody(spy).generationConfig as {
+      thinkingConfig?: { thinkingBudget?: number }
+    }
+    expect(config.thinkingConfig?.thinkingBudget).toBeGreaterThan(0)
+  })
+
+  it('leaves most of the ceiling for the answer', async () => {
+    const spy = stubFetch(replyWith('ok'))
+    await generate({
+      system: 's',
+      messages: [{ role: 'user', content: 'q' }],
+      maxOutputTokens: 12288,
+    })
+    const config = sentBody(spy).generationConfig as {
+      maxOutputTokens: number
+      thinkingConfig: { thinkingBudget: number }
+    }
+    expect(config.thinkingConfig.thinkingBudget).toBeLessThan(config.maxOutputTokens / 2)
+  })
+
+  it('lets a caller lower it for short structured output', async () => {
+    const spy = stubFetch(replyWith('{}'))
+    await generate({
+      system: 's',
+      messages: [{ role: 'user', content: 'q' }],
+      thinkingBudget: 512,
+      maxOutputTokens: 2048,
+      responseMimeType: 'application/json',
+    })
+    const config = sentBody(spy).generationConfig as {
+      thinkingConfig: { thinkingBudget: number }
+    }
+    expect(config.thinkingConfig.thinkingBudget).toBe(512)
+  })
+
+  it('never sends 0, which 2.5 Pro rejects', async () => {
+    // Flash accepts 0 to disable thinking; Pro's minimum is 128, and the model
+    // is deployment-configurable.
+    const spy = stubFetch(replyWith('ok'))
+    await generate({ system: 's', messages: [{ role: 'user', content: 'q' }] })
+    const config = sentBody(spy).generationConfig as {
+      thinkingConfig: { thinkingBudget: number }
+    }
+    expect(config.thinkingConfig.thinkingBudget).not.toBe(0)
+  })
+})
+
+describe('a truncated answer', () => {
+  it('tells the student instead of stopping mid-sentence', async () => {
+    stubFetch({
+      candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: 'The key idea is' }] } }],
+    })
+    const reply = await generate({ system: 's', messages: [{ role: 'user', content: 'q' }] })
+    expect(reply).toContain('The key idea is')
+    expect(reply).toContain('length limit')
+  })
+
+  it('leaves JSON responses untouched so they still parse', async () => {
+    stubFetch({
+      candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: '{"notes":[]}' }] } }],
+    })
+    const reply = await generate({
+      system: 's',
+      messages: [{ role: 'user', content: 'q' }],
+      responseMimeType: 'application/json',
+    })
+    expect(() => JSON.parse(reply)).not.toThrow()
+  })
+})
+
 describe('the Gemini response', () => {
   it('concatenates every text part', async () => {
     stubFetch({ candidates: [{ content: { parts: [{ text: 'one ' }, { text: 'two' }] } }] })

@@ -22,6 +22,28 @@ const GEMINI_API_KEY = denoEnv?.get('GEMINI_API_KEY')
 const GEMINI_MODEL = denoEnv?.get('GEMINI_MODEL') ?? 'gemini-2.5-flash'
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
 
+/**
+ * How many tokens the model may spend reasoning before it starts writing.
+ *
+ * This is deducted from `maxOutputTokens`, so an uncapped ("dynamic") budget
+ * lets a long document eat the answer. 2048 leaves the bulk of the ceiling for
+ * prose while keeping enough reasoning for quizzes and summaries.
+ *
+ * Deliberately a positive number, not 0: 2.5 Flash accepts 0 to disable
+ * thinking entirely, but 2.5 Pro rejects it (its minimum is 128), and the
+ * model is deployment-configurable. Override with GEMINI_THINKING_BUDGET.
+ */
+const DEFAULT_THINKING_BUDGET = 2048
+
+function readThinkingBudget(): number {
+  const raw = denoEnv?.get('GEMINI_THINKING_BUDGET')?.trim()
+  if (!raw) return DEFAULT_THINKING_BUDGET
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_THINKING_BUDGET
+}
+
+const THINKING_BUDGET = readThinkingBudget()
+
 export const isGeminiConfigured = Boolean(GEMINI_API_KEY)
 
 export interface InlineFile {
@@ -68,6 +90,11 @@ export interface GenerateOptions {
   temperature?: number
   /** Set to 'application/json' to make Gemini emit parseable JSON. */
   responseMimeType?: string
+  /**
+   * Tokens the model may spend reasoning before it writes. Capped because this
+   * comes OUT of `maxOutputTokens` — see THINKING_BUDGET.
+   */
+  thinkingBudget?: number
 }
 
 /**
@@ -121,8 +148,15 @@ export async function generate(options: GenerateOptions): Promise<string> {
         }
       }),
       generationConfig: {
-        maxOutputTokens: options.maxOutputTokens ?? 1500,
+        maxOutputTokens: options.maxOutputTokens ?? 4096,
         temperature: options.temperature ?? 0.7,
+        // Gemini 2.5 reasons before it writes, and those thinking tokens are
+        // billed against maxOutputTokens. Left on "dynamic" the model can spend
+        // most of the budget thinking about a long document and then get cut
+        // off mid-answer — which reads as "the reply is longer but still
+        // incomplete" no matter how high the ceiling goes. Capping reasoning is
+        // the fix; raising the ceiling alone only buys a little more each time.
+        thinkingConfig: { thinkingBudget: options.thinkingBudget ?? THINKING_BUDGET },
         ...(options.responseMimeType ? { responseMimeType: options.responseMimeType } : {}),
       },
     }),
@@ -170,6 +204,11 @@ export async function generate(options: GenerateOptions): Promise<string> {
 
   if (candidate?.finishReason === 'MAX_TOKENS') {
     console.warn('[gemini] response truncated at maxOutputTokens')
+    // Say so rather than handing back a sentence that stops mid-word. Skipped
+    // for JSON responses, where appending prose would break the parse.
+    if (!options.responseMimeType) {
+      return `${text}\n\n---\n*That answer hit the length limit. Ask me to continue and I'll pick up where I left off.*`
+    }
   }
 
   return text
