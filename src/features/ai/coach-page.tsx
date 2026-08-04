@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
   Bot,
-  Loader2,
   MessageSquarePlus,
   Paperclip,
   RotateCcw,
@@ -16,11 +15,12 @@ import { toast } from 'sonner'
 import { useAuth } from '@/app/providers/auth-provider'
 import { PageHeader } from '@/components/page-header'
 import { PlanGate } from '@/components/plan-gate'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
+import { COACH_ART, SparkleGlyph } from '@/features/ai/coach-art'
 import { useAssignments, useModules } from '@/features/assignments/hooks'
 import { useCalendarEvents } from '@/features/calendar/hooks'
 import { useNotes } from '@/features/notes/hooks'
@@ -118,6 +118,7 @@ export function CoachPage() {
   }
 
   const activeConversation = conversationList.find((c) => c.id === activeId) ?? null
+  const activeMode = COACH_MODES.find((m) => m.id === mode)
   const { data: messageList = [] } = useMessages(activeId)
 
   // A live, bounded snapshot of everything the student is actually juggling.
@@ -284,7 +285,32 @@ export function CoachPage() {
 
           {/* Chat pane */}
           <Card className="flex min-h-[60vh] flex-col gap-0 py-0">
-            <div className="flex flex-wrap items-center gap-1.5 border-b p-3">
+            <div className="from-primary/8 border-b bg-gradient-to-r to-transparent p-3">
+              <div className="mb-2.5 flex items-center gap-2.5">
+                <img
+                  src={COACH_ART.mascot}
+                  alt=""
+                  width={36}
+                  height={36}
+                  className="size-9 shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{activeMode?.label}</p>
+                  <p className="text-muted-foreground truncate text-xs">{activeMode?.hint}</p>
+                </div>
+                {activeConversation ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 lg:hidden"
+                    onClick={() => setActiveId(null)}
+                  >
+                    <MessageSquarePlus /> New chat
+                  </Button>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
               {COACH_MODES.map((coachMode) => (
                 <button
                   key={coachMode.id}
@@ -298,36 +324,34 @@ export function CoachPage() {
                   // the first message.
                   onClick={() => setMode(coachMode.id)}
                   className={cn(
-                    'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                    'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
                     mode === coachMode.id
                       ? 'bg-primary border-primary text-primary-foreground'
                       : 'hover:bg-accent',
                   )}
                 >
+                  {mode === coachMode.id ? <SparkleGlyph className="size-3" /> : null}
                   {coachMode.label}
                 </button>
               ))}
-              {activeConversation ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="ml-auto lg:hidden"
-                  onClick={() => setActiveId(null)}
-                >
-                  <MessageSquarePlus /> New chat
-                </Button>
-              ) : null}
+              </div>
             </div>
 
             <ScrollArea className="flex-1">
               <div ref={scrollRef} className="space-y-4 p-4">
                 {messageList.length === 0 ? (
-                  <div className="text-muted-foreground flex flex-col items-center gap-2 py-16 text-center text-sm">
-                    <Bot aria-hidden className="text-primary size-8" />
+                  <div className="text-muted-foreground flex flex-col items-center gap-3 py-12 text-center text-sm">
+                    <img
+                      src={COACH_ART.reading}
+                      alt=""
+                      width={144}
+                      height={144}
+                      className="size-36"
+                    />
+                    <p className="text-foreground text-base font-semibold">{activeMode?.label}</p>
                     <p className="max-w-sm">
-                      {COACH_MODES.find((m) => m.id === mode)?.hint}. The coach knows your real
-                      deadlines and never invents new ones.
+                      {activeMode?.hint}. The coach knows your real deadlines and never invents new
+                      ones.
                     </p>
                   </div>
                 ) : (
@@ -339,7 +363,10 @@ export function CoachPage() {
                         message.role === 'user' ? 'flex-row-reverse' : '',
                       )}
                     >
-                      <Avatar className="size-7">
+                      <Avatar className="size-7 shrink-0">
+                        {message.role === 'assistant' ? (
+                          <AvatarImage src={COACH_ART.mascot} alt="" />
+                        ) : null}
                         <AvatarFallback
                           className={
                             message.role === 'assistant'
@@ -371,7 +398,14 @@ export function CoachPage() {
                 )}
                 {sendMessage.isPending ? (
                   <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                    <Loader2 className="size-4 animate-spin" /> Thinking…
+                    <img
+                      src={COACH_ART.thinking}
+                      alt=""
+                      width={32}
+                      height={32}
+                      className="size-8 shrink-0"
+                    />
+                    Thinking…
                   </div>
                 ) : null}
                 {failedSend && !sendMessage.isPending ? (
