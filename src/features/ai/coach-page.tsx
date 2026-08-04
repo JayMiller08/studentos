@@ -90,6 +90,7 @@ export function CoachPage() {
     text: string
     conversation: AIConversation
     files: Attachment[]
+    mode: CoachMode
   } | null>(null)
   /** Files staged for the next message; cleared once it is sent. */
   const [attachments, setAttachments] = React.useState<Attachment[]>([])
@@ -143,10 +144,12 @@ export function CoachPage() {
       text,
       conversation,
       files,
+      mode: sendMode,
     }: {
       text: string
       conversation: AIConversation
       files: Attachment[]
+      mode: CoachMode
     }) => {
       // Read the thread fresh — the rendered copy lags behind a retry, and
       // sending stale history would ask the model to answer twice.
@@ -167,13 +170,18 @@ export function CoachPage() {
       history.push({ role: 'user', content: text, files })
 
       const reply = await aiService.getReply({
-        mode: conversation.mode,
+        mode: sendMode,
         history,
         studyContext,
       })
       await aiService.appendMessage(user!.id, conversation.id, 'assistant', reply)
       if (conversation.title === 'New conversation') {
         await aiService.renameConversation(conversation.id, text.slice(0, 48))
+      }
+      // Keep the stored mode in step so reopening the thread lands on the mode
+      // it was last used in.
+      if (conversation.mode !== sendMode) {
+        await aiService.setConversationMode(conversation.id, sendMode)
       }
     },
     onSuccess: () => setFailedSend(null),
@@ -203,7 +211,7 @@ export function CoachPage() {
       // failure to even start one hands the words back.
       setDraft('')
       setAttachments([])
-      await sendMessage.mutateAsync({ text, conversation, files })
+      await sendMessage.mutateAsync({ text, conversation, files, mode })
     } catch {
       // Starting the conversation failed, so nothing was saved and there is no
       // thread to retry from — put the draft and files back. A failure *after*
@@ -276,17 +284,21 @@ export function CoachPage() {
 
           {/* Chat pane */}
           <Card className="flex min-h-[60vh] flex-col gap-0 py-0">
-            <div className="flex flex-wrap gap-1.5 border-b p-3">
+            <div className="flex flex-wrap items-center gap-1.5 border-b p-3">
               {COACH_MODES.map((coachMode) => (
                 <button
                   key={coachMode.id}
                   type="button"
                   title={coachMode.hint}
                   aria-pressed={mode === coachMode.id}
-                  disabled={Boolean(activeConversation)}
+                  // Switchable at any time. These used to lock once a
+                  // conversation existed, and the only way to unlock them —
+                  // "New conversation" — lives in a panel hidden below `lg`, so
+                  // on a phone five of the six modes became unreachable after
+                  // the first message.
                   onClick={() => setMode(coachMode.id)}
                   className={cn(
-                    'rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50',
+                    'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
                     mode === coachMode.id
                       ? 'bg-primary border-primary text-primary-foreground'
                       : 'hover:bg-accent',
@@ -295,6 +307,17 @@ export function CoachPage() {
                   {coachMode.label}
                 </button>
               ))}
+              {activeConversation ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto lg:hidden"
+                  onClick={() => setActiveId(null)}
+                >
+                  <MessageSquarePlus /> New chat
+                </Button>
+              ) : null}
             </div>
 
             <ScrollArea className="flex-1">

@@ -45,6 +45,11 @@ export const aiService = {
     await conversations().update(id, { title })
   },
 
+  /** Switching mode mid-thread retargets the conversation, so it reopens there. */
+  async setConversationMode(id: string, mode: CoachMode): Promise<void> {
+    await conversations().update(id, { mode })
+  },
+
   async removeConversation(id: string): Promise<void> {
     await conversations().remove(id)
   },
@@ -171,7 +176,10 @@ function clozeQuestion(sentence: string): { question: string; answer: string } |
     .map((word, index) => ({ word: word.replace(/[^\p{L}\p{N}-]/gu, ''), index }))
     .filter(({ word }) => word.length >= 6)
     .sort((a, b) => b.word.length - a.word.length)
-  const target = candidates[0]
+  // Blanking the opening word leaves a stem like "_____ the process by which…",
+  // which reads as broken grammar rather than a question. Prefer a word further
+  // in, and only fall back to the first if it is the sole candidate.
+  const target = candidates.find(({ index }) => index > 0) ?? candidates[0]
   if (!target) return null
   const blanked = words
     .map((word, index) => (index === target.index ? '_____' : word))
@@ -180,7 +188,11 @@ function clozeQuestion(sentence: string): { question: string; answer: string } |
 }
 
 function offlineCoach(mode: CoachMode, message: string, studyContext: string): string {
-  const material = message.length > 120 ? message : `${message}\n${studyContext}`
+  // Quiz, flashcards, summary and essay transform material the student
+  // supplied. They must NEVER fall back to the workload snapshot: padding a
+  // short message with it produced questions like "Today is _____ 4 August"
+  // — quizzing the student on their own timetable. Only `coach` reads context.
+  const material = message
 
   switch (mode) {
     case 'quiz': {
@@ -196,7 +208,11 @@ function offlineCoach(mode: CoachMode, message: string, studyContext: string): s
         .map((q, i) => `**Q${i + 1}.** ${q.question}`)
         .join('\n\n')
       const answers = questions.map((q, i) => `${i + 1}. ${q.answer}`).join('\n')
-      return `Here's a quick self-test from your material:\n\n${list}\n\n<details>\n**Answers**\n\n${answers}\n</details>${OFFLINE_NOTE}`
+      // Markdown only. Replies render through react-markdown without raw-HTML
+      // support (enabling it would let model output inject markup), so a
+      // <details> block leaked its tags as literal text AND showed the answers
+      // straight away — the opposite of a self-test.
+      return `Here's a quick self-test from your material:\n\n${list}\n\n---\n\n**Answers** — cover this part until you've attempted all ${questions.length}:\n\n${answers}${OFFLINE_NOTE}`
     }
 
     case 'flashcards': {
