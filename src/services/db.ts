@@ -1,4 +1,5 @@
 import { type Filter, type ListOptions, localDb } from '@/lib/local-db'
+import { requestGuard } from '@/lib/request-guard'
 import { supabase } from '@/lib/supabase'
 
 export type { Filter, FilterOp, ListOptions, OrderBy } from '@/lib/local-db'
@@ -184,8 +185,29 @@ function localTable<Row extends Identifiable>(tableName: string): TableClient<Ro
   }
 }
 
+/**
+ * Route every call through the shared request guard.
+ *
+ * Written out method by method rather than with a Proxy so it stays typed —
+ * adding a method to TableClient without guarding it becomes a compile error
+ * instead of a silent hole in the rate limiting.
+ */
+function guarded<Row extends Identifiable>(client: TableClient<Row>): TableClient<Row> {
+  return {
+    list: (options) => requestGuard.run(() => client.list(options)),
+    get: (id) => requestGuard.run(() => client.get(id)),
+    insert: (values) => requestGuard.run(() => client.insert(values)),
+    upsert: (values) => requestGuard.run(() => client.upsert(values)),
+    update: (id, patch) => requestGuard.run(() => client.update(id, patch)),
+    remove: (id) => requestGuard.run(() => client.remove(id)),
+    count: (filters) => requestGuard.run(() => client.count(filters)),
+  }
+}
+
 export function table<Row extends Identifiable>(tableName: string): TableClient<Row> {
-  return supabase ? supabaseTable<Row>(tableName) : localTable<Row>(tableName)
+  // Demo mode reads localStorage — no network to protect, and queuing it would
+  // only make the offline experience feel worse.
+  return supabase ? guarded(supabaseTable<Row>(tableName)) : localTable<Row>(tableName)
 }
 
 /** Convenience: filter rows to the signed-in user. Supabase RLS enforces this

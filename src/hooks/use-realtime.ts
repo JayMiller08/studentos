@@ -26,6 +26,9 @@ interface ChannelEntry {
 
 const registry = new Map<string, ChannelEntry>()
 
+/** Long enough to swallow a reconnect replay, short enough to feel live. */
+const INVALIDATE_DEBOUNCE_MS = 250
+
 function subscribeShared(
   topic: string,
   tableName: string,
@@ -84,15 +87,28 @@ export function useRealtimeTable(
 
   React.useEffect(() => {
     if (!userId) return
+
+    // Changes arrive one event per row, and a reconnect can replay a burst of
+    // them. Invalidating on each would turn "the planner resynced" into a
+    // volley of refetches across every subscribed table at once, which is
+    // precisely the pile-up the request guard is there to absorb — better not
+    // to generate it. Coalesce a burst into a single refetch.
+    let timer: number | undefined
     const invalidate = () => {
-      void queryClient.invalidateQueries({ queryKey: JSON.parse(keyJson) as unknown[] })
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        void queryClient.invalidateQueries({ queryKey: JSON.parse(keyJson) as unknown[] })
+      }, INVALIDATE_DEBOUNCE_MS)
     }
 
-    if (!supabase) {
-      return localDb.subscribe(tableName, invalidate)
-    }
+    const unsubscribe = supabase
+      ? // One channel per table+user; the topic must be stable so subscribers share it.
+        subscribeShared(`db:${tableName}:${userId}`, tableName, userId, invalidate)
+      : localDb.subscribe(tableName, invalidate)
 
-    // One channel per table+user; the topic must be stable so subscribers share it.
-    return subscribeShared(`db:${tableName}:${userId}`, tableName, userId, invalidate)
+    return () => {
+      window.clearTimeout(timer)
+      unsubscribe()
+    }
   }, [tableName, userId, keyJson, queryClient])
 }
