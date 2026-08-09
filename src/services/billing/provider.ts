@@ -25,6 +25,12 @@ export interface PortalSession {
   url: string
 }
 
+export interface CheckoutConfirmation {
+  /** Whether the payment has completed. False means still pending or failed. */
+  settled: boolean
+  plan?: Plan
+}
+
 export interface BillingProvider {
   readonly id: 'stripe' | 'paystack' | 'mock'
   /** Whether checkout is live. When false the UI shows a "coming soon" state
@@ -34,4 +40,16 @@ export interface BillingProvider {
   createCheckout(request: CheckoutRequest): Promise<CheckoutSession>
   /** Create a customer portal session for managing an existing subscription. */
   createPortalSession(returnUrl: string): Promise<PortalSession>
+  /**
+   * Optional: settle the redirect back from the provider.
+   *
+   * Paystack appends a transaction `reference` to the callback URL; verifying
+   * it server-side upgrades the account immediately instead of leaving the
+   * student on a stale Free plan until the webhook lands. Providers whose
+   * webhook is the only signal (Stripe) omit this.
+   *
+   * The reference is only ever an identifier — the outcome is read from the
+   * provider, never from the browser.
+   */
+  confirmCheckout?(reference: string): Promise<CheckoutConfirmation>
 }

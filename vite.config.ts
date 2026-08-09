@@ -60,6 +60,12 @@ export default defineConfig({
       devOptions: { enabled: false },
     }),
   ],
+  server: {
+    // Honour an assigned port so a second dev server can run alongside one
+    // that already holds 5173. Nothing here depends on a fixed port: auth
+    // redirects use VITE_APP_URL, and the app reads its own origin at runtime.
+    port: Number(process.env.PORT) || 5173,
+  },
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

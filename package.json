@@ -12,7 +12,7 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "db:push": "supabase db push",
-    "functions:deploy": "supabase functions deploy ai-chat && supabase functions deploy ai-plan && supabase functions deploy billing && supabase functions deploy stripe-webhook --no-verify-jwt && supabase functions deploy send-reminders --no-verify-jwt"
+    "functions:deploy": "supabase functions deploy ai-chat && supabase functions deploy ai-plan && supabase functions deploy paystack && supabase functions deploy paystack-webhook --no-verify-jwt && supabase functions deploy send-reminders --no-verify-jwt"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

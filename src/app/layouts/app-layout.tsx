@@ -11,6 +11,7 @@ import { InstallBanner } from '@/features/pwa/install-banner'
 import { ProductTour } from '@/features/tour/product-tour'
 import { TourButton } from '@/features/tour/tour-button'
 import { TourProvider } from '@/features/tour/tour-provider'
+import { ConnectionBanner } from '@/components/connection-banner'
 import { CookieConsent } from '@/components/cookie-consent'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -197,6 +198,7 @@ export function AppLayout() {
         </aside>
 
         <div className="flex min-h-dvh flex-col lg:pl-64">
+          <ConnectionBanner />
           <DemoBanner />
 
           {/* Topbar */}

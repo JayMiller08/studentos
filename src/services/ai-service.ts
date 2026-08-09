@@ -1,4 +1,5 @@
 import { env } from '@/lib/env'
+import { requestGuard } from '@/lib/request-guard'
 import { supabase } from '@/lib/supabase'
 import { byUser, table } from '@/services/db'
 import type { AIConversation, AIMessage } from '@/types/models'
@@ -136,25 +137,32 @@ export interface StudyPlanRequest {
   }>
 }
 
-/** POST to an Edge Function with the caller's JWT, surfacing its error text. */
+/**
+ * POST to an Edge Function with the caller's JWT, surfacing its error text.
+ * Guarded like every other network call: AI requests are the most expensive
+ * thing the app can ask for, so a client on a dead link must not keep firing
+ * them at the backend.
+ */
 async function callFunction<T>(name: string, payload: unknown): Promise<T> {
   const { data: sessionData } = await supabase!.auth.getSession()
   const token = sessionData.session?.access_token
   if (!token) throw new Error('You need to be signed in to use AI features.')
 
-  const response = await fetch(`${env.supabaseUrl}/functions/v1/${name}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
+  return requestGuard.run(async () => {
+    const response = await fetch(`${env.supabaseUrl}/functions/v1/${name}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { error?: string } | null
+      throw new Error(body?.error ?? `AI request failed (${response.status})`)
+    }
+    return (await response.json()) as T
   })
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { error?: string } | null
-    throw new Error(body?.error ?? `AI request failed (${response.status})`)
-  }
-  return (await response.json()) as T
 }
 
 // ── Offline (rule-based) coach ─────────────────────────────────────────────

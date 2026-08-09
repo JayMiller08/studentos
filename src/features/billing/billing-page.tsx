@@ -34,18 +34,54 @@ export function BillingPage() {
   })
 
   const currentPlan = profile?.plan ?? 'free'
-  // Paystack approval is pending, so real checkout isn't live yet in production.
   const checkoutAvailable = billingService.checkoutAvailable
+  const [confirming, setConfirming] = React.useState(false)
+  /** Guards against StrictMode's double effect run confirming twice. */
+  const settledRef = React.useRef<string | null>(null)
 
   // Surface the checkout redirect result once.
   React.useEffect(() => {
     const status = searchParams.get('status')
-    if (!status) return
-    if (status === 'success') toast.success('Subscription activated — welcome to the club! 🎉')
-    if (status === 'cancelled') toast('Checkout cancelled — no changes made.')
-    void refreshProfile()
-    void refetch()
-    searchParams.delete('status')
+    // Paystack appends the transaction reference to the callback URL.
+    const reference = searchParams.get('reference') ?? searchParams.get('trxref')
+    if (!status && !reference) return
+    if (reference && settledRef.current === reference) return
+    if (reference) settledRef.current = reference
+
+    async function settle() {
+      if (status === 'cancelled') toast('Checkout cancelled — no changes made.')
+
+      if (reference) {
+        setConfirming(true)
+        try {
+          // Verified against the provider server-side — the redirect itself is
+          // not evidence that anything was paid.
+          const outcome = await billingService.confirmCheckout(reference)
+          if (outcome === false) {
+            toast('Payment is still processing — your plan updates the moment it clears.')
+          } else {
+            toast.success('Subscription activated — welcome to the club! 🎉')
+          }
+        } catch (error) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "We couldn't confirm that payment. If you were charged, your plan will update shortly.",
+          )
+        } finally {
+          setConfirming(false)
+        }
+      } else if (status === 'success') {
+        toast.success('Subscription activated — welcome to the club! 🎉')
+      }
+
+      await refreshProfile()
+      await refetch()
+    }
+
+    void settle()
+
+    for (const key of ['status', 'reference', 'trxref']) searchParams.delete(key)
     setSearchParams(searchParams, { replace: true })
   }, [searchParams, setSearchParams, refreshProfile, refetch])
 
@@ -89,6 +125,20 @@ export function BillingPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Billing & plans" description="Manage your StudentOS subscription" />
+
+      {confirming ? (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex items-center gap-3 pt-1">
+            <Loader2 aria-hidden className="text-primary size-5 shrink-0 animate-spin" />
+            <div className="text-sm">
+              <p className="font-medium">Confirming your payment…</p>
+              <p className="text-muted-foreground">
+                Checking with Paystack. This usually takes a couple of seconds.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {!checkoutAvailable && !isDemo ? (
         <Card className="border-primary/30 bg-primary/5">
@@ -163,7 +213,7 @@ export function BillingPage() {
             <p className="text-muted-foreground">
               {isDemo
                 ? 'Demo mode simulates checkout — no real payment is taken.'
-                : 'Payments will be processed securely by Paystack. StudentOS never sees your card details, and you can cancel any time.'}
+                : 'Payments are processed securely by Paystack. StudentOS never sees your card details, and you can cancel any time.'}
             </p>
           </div>
         </CardContent>
