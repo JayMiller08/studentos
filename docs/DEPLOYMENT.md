@@ -8,7 +8,8 @@ production setup.
 
 - A Supabase project (free tier is fine to start).
 - A Vercel account.
-- A Stripe account (test mode first).
+- A Paystack account (test mode first). Paystack is the live processor —
+  Stripe does not support South African businesses, and plans are priced in ZAR.
 - A Google Gemini API key (for the AI coach and Smart Plan notes) — create one
   in [Google AI Studio](https://aistudio.google.com/apikey) and make sure the
   Generative Language API is enabled for the project.
@@ -100,38 +101,54 @@ get a profile row from the `handle_new_user` trigger (name comes from Google's
 npx supabase secrets set \
   GEMINI_API_KEY=AIza… \
   GEMINI_MODEL=gemini-2.5-flash \
-  STRIPE_SECRET_KEY=sk_live_… \
-  STRIPE_WEBHOOK_SECRET=whsec_… \
-  STRIPE_PRICE_PRO_MONTHLY=price_… \
-  STRIPE_PRICE_ELITE_MONTHLY=price_… \
+  PAYSTACK_SECRET_KEY=sk_live_… \
+  PAYSTACK_PLAN_PRO_MONTHLY=PLN_… \
+  PAYSTACK_PLAN_ELITE_MONTHLY=PLN_… \
   CRON_SECRET=$(openssl rand -hex 16)
 
-# All five at once:
+# All of them at once:
 npm run functions:deploy
 
 # …or individually:
 npx supabase functions deploy ai-chat            # JWT-verified (Pro-gated)
 npx supabase functions deploy ai-plan            # JWT-verified (Pro-gated)
+npx supabase functions deploy paystack           # JWT-verified
+npx supabase functions deploy paystack-webhook --no-verify-jwt
+npx supabase functions deploy send-reminders --no-verify-jwt
+
+# Stripe is kept for markets Paystack doesn't serve; skip unless you switch to it.
 npx supabase functions deploy billing            # JWT-verified
 npx supabase functions deploy stripe-webhook --no-verify-jwt
-npx supabase functions deploy send-reminders --no-verify-jwt
 ```
 
 `supabase/config.toml` declares the daily cron schedule for `send-reminders`.
 
-## 4. Stripe
+## 4. Paystack
 
-1. Create two recurring prices (Pro $4.99/mo, Elite $9.99/mo). Copy their
-   price IDs into the secrets above.
-2. Add a webhook endpoint pointing at:
-   `https://<project-ref>.functions.supabase.co/stripe-webhook`
-   subscribed to: `checkout.session.completed`,
-   `customer.subscription.created|updated|deleted`.
-3. Put the webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
-4. Enable the customer portal in Stripe settings (used by "Manage subscription").
+1. **Create the plans.** Paystack dashboard → Plans → two monthly plans in ZAR:
+   Student Pro **R49/mo** and Student Elite **R99/mo**. Copy each `PLN_…` plan
+   code into the secrets above. The amount is *not* duplicated in code — the
+   `paystack` function reads it from the plan, so the dashboard stays the single
+   source of truth for price.
+2. **Point the webhook** at
+   `https://<project-ref>.functions.supabase.co/paystack-webhook`
+   (Settings → API Keys & Webhooks → Webhook URL). Paystack sends every event to
+   one URL; the function handles `charge.success`, `subscription.create`,
+   `subscription.enable`, `subscription.disable`, `subscription.not_renew`,
+   `invoice.update` and `invoice.payment_failed`, and acknowledges the rest.
+3. **No separate webhook secret.** Paystack signs the raw body with HMAC-SHA512
+   keyed on your *secret key*, so `PAYSTACK_SECRET_KEY` is all the webhook needs.
+   Use the test secret key with the test webhook URL and the live one with live.
+4. **Nothing to enable for "Manage subscription."** The billing page asks
+   Paystack for a per-subscription management link at click time, which is where
+   the student updates their card or cancels.
 
-The webhook is the **only** thing that writes `subscriptions` and
-`profiles.plan` — the browser can never grant itself a paid plan.
+`paystack-webhook` is the authoritative feed for `subscriptions` and
+`profiles.plan`. The `confirm` action on the `paystack` function also writes
+them, but only after re-verifying the reference **with Paystack server-side** —
+it exists so an upgrade shows up the instant the student lands back on the app
+instead of waiting for the webhook. The browser is never the source of an
+entitlement in either path.
 
 ## 5. Frontend (Vercel)
 
@@ -159,8 +176,11 @@ Add a rewrite so client-side routes resolve (`vercel.json`):
 
 - Sign up → confirm email → land in onboarding → dashboard.
 - Create an assignment; confirm the priority score appears (Pro).
-- Upgrade via Stripe test card `4242 4242 4242 4242`; confirm the webhook flips
-  the plan and the billing page shows "active".
+- Upgrade with a Paystack test card (`4084 0840 8408 4081`, any future expiry,
+  CVV `408`); confirm you land back on the billing page already on the new plan,
+  and that the webhook has written `subscriptions` with a `SUB_…` code.
+- Cancel from "Manage subscription"; confirm access runs to the end of the paid
+  period rather than stopping immediately.
 - Hit the AI coach (Pro) and confirm it responds and never invents deadlines.
 
 ## Environments

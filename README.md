@@ -23,14 +23,14 @@ Built as a production-grade, venture-backed SaaS product designed to scale to
 | **Calendar** | Month/week/exam views, recurring class timetable, assignment deadlines overlaid, drag-to-move |
 | **Focus Center** | Reload-proof Pomodoro engine, deep-work mode, generated ambient sound, distraction counter, session history |
 | **Priority Engine** | Transparent factor model (urgency, weight, effort, difficulty, declared priority, momentum) → 0–100 score |
-| **Smart Plan** | Deterministic AI study-schedule generator, capacity-aware, one-tap apply into the planner |
+| **Smart Plan** | Deterministic AI study-schedule generator, capacity-aware, one-tap apply into the planner, saved plans you can reopen, edit, rename or delete |
 | **AI Coach** | Chat with 6 modes (coach, quiz, flashcards, summary, essay, code), grounded in real deadlines; never invents dates |
 | **Analytics** | Productivity score, focus/pipeline charts, Pro-gated weekly trends |
 | **Habits** | Daily/weekly/monthly cadences, streaks, completion rates, 12-week heatmap |
 | **Budget** | Income/expense tracking, category breakdown, month-end projection & alerts, savings goals |
 | **Notes** | Markdown editor with live preview, folders, tags, search, autosave, version history |
 | **Gamification** | XP, quadratic level curve, 13 badges, achievements |
-| **Billing** | Provider-abstracted (Stripe) subscriptions, plan gating, self-serve management |
+| **Billing** | Provider-abstracted (Paystack, ZAR) subscriptions, plan gating, self-serve management |
 | **Admin** | User/plan management, feature flags, announcements, support tickets |
 
 ---
@@ -45,7 +45,7 @@ Recharts · Lucide · `@dnd-kit` · PWA (`vite-plugin-pwa`)
 
 **AI** — Google Gemini via Supabase Edge Functions (key stays server-side)
 
-**Payments** — Stripe, behind a swappable provider abstraction
+**Payments** — Paystack (ZAR), behind a swappable provider abstraction
 
 **Deploy** — Vercel (frontend) + Supabase (backend)
 
@@ -106,7 +106,8 @@ src/
   styles/         # design tokens + globals
 supabase/
   migrations/     # normalized schema, triggers, RLS, storage policies
-  functions/      # edge functions: ai-chat, billing, stripe-webhook, send-reminders
+  functions/      # edge functions: ai-chat, ai-plan, paystack, paystack-webhook,
+                  #                 send-reminders (+ dormant Stripe pair)
 ```
 
 **Key idea — one data seam.** Every feature talks to `services/db.ts::table()`,
@@ -128,13 +129,15 @@ See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the full runbook. In short:
 2. Push the schema: `npm run db:push` (migrations in `supabase/migrations`).
 3. Set server secrets and deploy edge functions:
    ```bash
-   npx supabase secrets set GEMINI_API_KEY=… STRIPE_SECRET_KEY=… \
-     STRIPE_WEBHOOK_SECRET=… STRIPE_PRICE_PRO_MONTHLY=… STRIPE_PRICE_ELITE_MONTHLY=…
+   npx supabase secrets set GEMINI_API_KEY=… PAYSTACK_SECRET_KEY=… \
+     PAYSTACK_PLAN_PRO_MONTHLY=PLN_… PAYSTACK_PLAN_ELITE_MONTHLY=PLN_…
    npm run functions:deploy
    ```
    The CLI ships as a devDependency — `npm install` then `npx supabase …`
    (Supabase does not support `npm i -g supabase`).
-4. Point a Stripe webhook at the `stripe-webhook` function.
+4. Point your Paystack webhook URL at the `paystack-webhook` function (deployed
+   `--no-verify-jwt`). Paystack signs with your secret key, so there is no
+   separate webhook secret to set.
 5. Deploy the frontend to Vercel with the same env vars per environment
    (Development / Preview / Production).
 
@@ -144,9 +147,10 @@ See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the full runbook. In short:
 
 - **Row Level Security** on every table — deny-by-default; the browser anon key
   can do nothing outside explicit per-user policies.
-- **No secrets in the browser.** The Gemini and Stripe keys live only in
-  edge functions. The Stripe webhook is the *sole* source of subscription
-  truth (signature-verified).
+- **No secrets in the browser.** The Gemini and Paystack keys live only in
+  edge functions. Subscription state is written only by server-side code that
+  confirmed the payment with Paystack — the signature-verified webhook, or a
+  reference re-verified against Paystack's API.
 - **Privilege-escalation guards** in RLS: users can't grant themselves `admin`
   or a paid `plan`.
 - **Validated inputs** everywhere via Zod; validated runtime env config.
@@ -176,7 +180,7 @@ npm run test
 
 ## 💳 Plans
 
-| | Free | Student Pro ($4.99/mo) | Student Elite ($9.99/mo) |
+| | Free | Student Pro (R49/mo) | Student Elite (R99/mo) |
 |-|------|------------------------|--------------------------|
 | Core (dashboard, planner, calendar, focus, habits, budget) | ✅ | ✅ | ✅ |
 | Active assignments | 3 | Unlimited | Unlimited |

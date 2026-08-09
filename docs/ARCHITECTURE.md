@@ -67,7 +67,7 @@ TanStack Query keys registered in `lib/query-keys.ts`.
 |---------|-----------|-----------------|
 | Auth | `auth-service.ts` | Supabase Auth · demo (simulated) |
 | AI | `ai-service.ts` | `ai-chat` edge function · rule-based offline coach |
-| Payments | `services/billing/provider.ts` | `StripeProvider` · `MockProvider` |
+| Payments | `services/billing/provider.ts` | `PaystackProvider` (live) · `StripeProvider` · `MockProvider` |
 
 Choosing an implementation happens in exactly one place per concern (e.g.
 `billing-service.ts` picks the provider from `isSupabaseConfigured`).

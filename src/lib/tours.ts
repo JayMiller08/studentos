@@ -179,6 +179,10 @@ export const PAGE_TOURS: PageTour[] = [
         title: 'Apply a day at a time',
         body: 'Happy with a day? Send it straight to your planner as real tasks. Applying twice will not duplicate anything.',
       },
+      {
+        title: 'Save, edit, delete',
+        body: 'Keep a plan to come back to it — then reopen it, resize or drop blocks that stopped fitting, rename it, or delete it when the term moves on.',
+      },
     ],
   },
 

@@ -6,6 +6,19 @@ project_id = "studentos"
 [functions.ai-chat]
 verify_jwt = true
 
+[functions.ai-plan]
+verify_jwt = true
+
+# ── Payments: Paystack is the live processor (ZAR) ──────────────────────────
+[functions.paystack]
+verify_jwt = true
+
+[functions.paystack-webhook]
+# Paystack signs the raw body with HMAC-SHA512; it sends no JWT, so
+# verification must be OFF or every event is rejected before it is checked.
+verify_jwt = false
+
+# ── Payments: Stripe, retained for markets Paystack doesn't serve ───────────
 [functions.billing]
 verify_jwt = true
 

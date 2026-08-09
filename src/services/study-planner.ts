@@ -5,7 +5,7 @@ import {
   rankAssignments,
   type ScoredAssignment,
 } from '@/services/priority-engine'
-import type { Assignment } from '@/types/models'
+import type { Assignment, StudyBlock, StudyPlanDay } from '@/types/models'
 
 /**
  * AI study planner.
@@ -21,22 +21,10 @@ import type { Assignment } from '@/types/models'
  * the student can still move around.
  */
 
-export interface StudyBlock {
-  assignmentId: string
-  title: string
-  moduleId: string | null
-  minutes: number
-  /** Why this block is here, e.g. "Due in 2 days · score 82". */
-  reason: string
-}
-
-export interface StudyPlanDay {
-  dateKey: string
-  totalMinutes: number
-  blocks: StudyBlock[]
-  /** True when the day exceeds 80% of capacity — suggest lighter habits. */
-  heavy: boolean
-}
+// The block/day shapes are persisted verbatim by saved plans, so they live in
+// `types/models` with the rest of the stored shapes and are re-exported here
+// where the engine that produces them is.
+export type { StudyBlock, StudyPlanDay }
 
 export interface StudyPlan {
   days: StudyPlanDay[]
@@ -171,4 +159,28 @@ export function generateStudyPlan(
   recommendations.push('Work in 25–90 minute blocks with 5-minute breaks; take 15 minutes after every 4 blocks.')
 
   return { days, unscheduledMinutes, recommendations }
+}
+
+/** Smallest and largest a hand-edited block may be, matching the generator. */
+export const BLOCK_MINUTE_BOUNDS = { min: MIN_BLOCK, max: MAX_BLOCK } as const
+
+/**
+ * Rebuild a day's derived fields after its blocks were edited by hand.
+ *
+ * The generator proposes and the student decides, so once blocks are dropped
+ * or resized `totalMinutes` and `heavy` have to be recomputed — otherwise a
+ * saved plan carries totals that no longer describe its own schedule.
+ */
+export function reconcileDay(
+  day: StudyPlanDay,
+  blocks: StudyBlock[],
+  dailyCapacityMinutes: number,
+): StudyPlanDay {
+  const totalMinutes = blocks.reduce((sum, block) => sum + block.minutes, 0)
+  return { ...day, blocks, totalMinutes, heavy: totalMinutes > dailyCapacityMinutes * 0.8 }
+}
+
+/** Clamp a hand-edited block length into the range the engine schedules in. */
+export function clampBlockMinutes(minutes: number): number {
+  return Math.min(MAX_BLOCK, Math.max(MIN_BLOCK, Math.round(minutes)))
 }

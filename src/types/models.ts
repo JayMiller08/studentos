@@ -316,7 +316,8 @@ export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled'
 export interface Subscription extends UserOwnedRow {
   plan: Plan
   status: SubscriptionStatus
-  provider: 'stripe' | 'manual'
+  /** `manual` covers demo-mode and admin-granted plans. */
+  provider: 'stripe' | 'paystack' | 'manual'
   provider_customer_id: string | null
   provider_subscription_id: string | null
   current_period_end: string | null
@@ -335,6 +336,47 @@ export interface AIMessage extends BaseRow {
   user_id: string
   role: 'user' | 'assistant'
   content: string
+}
+
+/**
+ * One scheduled stretch of work on a study plan. Produced by
+ * `services/study-planner`; lives here because saved plans persist it verbatim
+ * into `study_plans.days`.
+ */
+export interface StudyBlock {
+  assignmentId: string
+  title: string
+  moduleId: string | null
+  minutes: number
+  /** Why this block is here, e.g. "Due in 2 days · score 82". */
+  reason: string
+}
+
+export interface StudyPlanDay {
+  dateKey: string
+  totalMinutes: number
+  blocks: StudyBlock[]
+  /** True when the day exceeds 80% of capacity — suggest lighter habits. */
+  heavy: boolean
+}
+
+/**
+ * A study plan a student chose to keep.
+ *
+ * The schedule is a JSONB snapshot: it is always read and written whole and
+ * never queried across, so normalizing it would buy nothing. The three
+ * generating inputs are real columns because those are what a student edits
+ * and re-runs.
+ */
+export interface SavedStudyPlan extends UserOwnedRow {
+  name: string
+  horizon_days: number
+  daily_capacity_minutes: number
+  /** 0–100, matching the page's slider (the engine takes 0–1). */
+  stress_level: number
+  days: StudyPlanDay[]
+  recommendations: string[]
+  unscheduled_minutes: number
 }
 
 // ── Gamification ─────────────────────────────────────────────────────────

@@ -8,10 +8,13 @@ import type { Plan, Subscription } from '@/types/models'
 /**
  * The single place where a concrete billing provider is chosen.
  * - Demo mode: MockProvider (simulated checkout, so the flow is showcaseable).
- * - Production: Paystack (Stripe doesn't support South African businesses).
- *   Paystack account approval is pending, so it reports `available: false` and
- *   the UI shows a "coming soon" state. Swap in the live implementation here
- *   once approved — nothing else changes.
+ * - Production: Paystack (Stripe doesn't support South African businesses;
+ *   plans are priced in ZAR).
+ *
+ * "Available" here means the client can attempt a charge. Whether the backend
+ * actually holds Paystack keys is a deployment question the edge function
+ * answers with a 503, which surfaces as a plain-language message rather than a
+ * permanently disabled UI.
  */
 export const billingProvider: BillingProvider = isSupabaseConfigured
   ? new PaystackProvider()
@@ -51,13 +54,27 @@ export const billingService = {
   },
 
   /**
+   * Settle the redirect back from the payment provider.
+   *
+   * Paystack appends `reference` to the callback URL; the provider verifies it
+   * against Paystack server-side and applies the entitlement, so the student
+   * lands on their new plan instead of a stale Free one while the webhook is
+   * still in flight. Resolves to null when the provider has no such step.
+   */
+  async confirmCheckout(reference: string): Promise<boolean | null> {
+    if (!billingProvider.confirmCheckout) return null
+    const result = await billingProvider.confirmCheckout(reference)
+    return result.settled
+  },
+
+  /**
    * Demo-mode only: simulate a completed checkout by writing the subscription
    * and upgrading the profile locally. In production this is done server-side
-   * by the Stripe webhook (never trusted from the browser).
+   * by the Paystack webhook (never trusted from the browser).
    */
   async simulateActivation(userId: string, plan: Exclude<Plan, 'free'>): Promise<void> {
     if (isSupabaseConfigured) {
-      throw new Error('Activation is handled by Stripe webhooks in production.')
+      throw new Error('Activation is handled by Paystack webhooks in production.')
     }
     const periodEnd = new Date()
     periodEnd.setMonth(periodEnd.getMonth() + 1)
@@ -82,7 +99,7 @@ export const billingService = {
   /** Demo-mode only: cancel the simulated subscription and drop to Free. */
   async simulateCancel(userId: string): Promise<void> {
     if (isSupabaseConfigured) {
-      throw new Error('Cancellation is handled by the Stripe portal in production.')
+      throw new Error('Cancellation is handled by the Paystack manage link in production.')
     }
     const existing = await billingService.getSubscription(userId)
     if (existing) {

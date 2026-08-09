@@ -30,6 +30,7 @@ export const queryKeys = {
   achievements: (userId: string) => ['achievements', userId] as const,
   badges: () => ['badges'] as const,
   subscription: (userId: string) => ['subscription', userId] as const,
+  studyPlans: (userId: string) => ['study-plans', userId] as const,
   aiConversations: (userId: string) => ['ai-conversations', userId] as const,
   aiMessages: (userId: string, conversationId: string) =>
     ['ai-messages', userId, conversationId] as const,

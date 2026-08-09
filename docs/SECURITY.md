@@ -14,7 +14,7 @@ Enabled on **every** table (`supabase/migrations/00003_rls_policies.sql`).
   additionally **freezes `role` and `plan`**: a user cannot escalate to `admin`
   or grant themselves a paid plan. Admins have a separate policy.
 - **`subscriptions`** — read-only to the owner; written exclusively by the
-  Stripe webhook via the service role.
+  payment provider's server-side functions via the service role.
 - **Catalog tables** (universities, degrees, badges, feature flags, published
   announcements) — readable by any authenticated user; writable only by admins.
 - **Support tickets** — owner CRUD + admin triage.
@@ -29,20 +29,31 @@ through `profiles` RLS.
 | Supabase anon key | browser (safe by design) | — |
 | Supabase service-role key | edge-function env only | browser, git |
 | Gemini API key | `ai-chat` / `ai-plan` function env | browser |
+| Paystack secret key | `paystack` / `paystack-webhook` env | browser |
 | Stripe secret key | `billing` / `stripe-webhook` env | browser |
 | Stripe webhook secret | `stripe-webhook` env | browser |
 
-The frontend never calls Stripe or Gemini directly — it calls an edge function
+Paystack has no separate webhook secret: it signs the raw request body with
+HMAC-SHA512 keyed on the secret key, which is why that one key covers both rows.
+
+The frontend never calls Paystack or Gemini directly — it calls an edge function
 that holds the key and enforces entitlements. Every AI function runs the same
 `requirePaidCaller` check (`_shared/auth.ts`): the client's `PlanGate` is UX
 only, and a request can always be replayed by hand.
 
 ## Billing integrity
 
-- Subscription state is written **only** by `stripe-webhook`, which verifies the
-  Stripe signature before trusting the payload.
-- `profiles.plan` (what the app gates on) is updated by the webhook to match the
-  live subscription; the client can never set it.
+- Subscription state is written **only** by server-side code that has confirmed
+  the payment with the provider:
+  - `paystack-webhook` verifies Paystack's HMAC-SHA512 signature against the
+    **raw** body (re-serialized JSON would never match) using a constant-time
+    compare, before trusting anything in the payload.
+  - The `confirm` action on the `paystack` function re-verifies the transaction
+    reference by calling Paystack directly, and refuses a reference whose
+    metadata names a different user. The browser supplies an identifier, never
+    an outcome.
+- `profiles.plan` (what the app gates on) is updated to match the live
+  subscription; the client can never set it — RLS freezes `plan` on `profiles`.
 - Client-side `PlanGate` is UX only — the server (RLS + the `ai-chat` function's
   plan check) is the actual gate.
 
