@@ -123,6 +123,18 @@ npx supabase functions deploy stripe-webhook --no-verify-jwt
 
 `supabase/config.toml` declares the daily cron schedule for `send-reminders`.
 
+> [!IMPORTANT]
+> **CRON_SECRET Enforcement & Rotation:**
+> `send-reminders` runs with the service role (bypasses RLS). It fails closed:
+> - Returns **503 Service Unavailable** if `CRON_SECRET` is unset in Supabase secrets.
+> - Returns **401 Unauthorized** if the request header `x-cron-secret` is missing or mismatched.
+>
+> If `send-reminders` was ever deployed without `CRON_SECRET` set, **rotate it immediately**:
+> ```bash
+> npx supabase secrets set CRON_SECRET=$(openssl rand -hex 16)
+> ```
+> Then update any scheduled job (e.g., pg_cron or external scheduler) to include header `x-cron-secret: <CRON_SECRET>`.
+
 ## 4. Paystack
 
 1. **Create the plans.** Paystack dashboard → Plans → two monthly plans in ZAR:
