@@ -7,8 +7,8 @@
  *   [functions.send-reminders]
  *   schedule = "0 6 * * *"
  *
- * Runs with the service role (bypasses RLS) — never expose this endpoint to
- * browsers; it validates a shared secret header when invoked over HTTP.
+ * Runs with the service role (bypasses RLS) — fails closed if CRON_SECRET is missing
+ * or if the `x-cron-secret` header is missing/invalid.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { jsonResponse } from '../_shared/cors.ts'
@@ -20,9 +20,13 @@ const CRON_SECRET = Deno.env.get('CRON_SECRET')
 const DAY_MS = 24 * 60 * 60 * 1000
 
 Deno.serve(async (req) => {
-  // Allow either the platform cron (no secret needed when not set) or a
-  // manual invocation carrying the shared secret.
-  if (CRON_SECRET && req.headers.get('x-cron-secret') !== CRON_SECRET) {
+  // Fail closed if CRON_SECRET is not configured in the environment.
+  if (!CRON_SECRET) {
+    return jsonResponse({ error: 'CRON_SECRET is not configured' }, 503)
+  }
+
+  // Require valid shared secret header on all invocations.
+  if (req.headers.get('x-cron-secret') !== CRON_SECRET) {
     return jsonResponse({ error: 'Unauthorized' }, 401)
   }
 
