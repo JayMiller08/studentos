@@ -101,6 +101,7 @@ get a profile row from the `handle_new_user` trigger (name comes from Google's
 npx supabase secrets set \
   GEMINI_API_KEY=AIza… \
   GEMINI_MODEL=gemini-2.5-flash \
+  GEMINI_THINKING_BUDGET=2048 \
   PAYSTACK_SECRET_KEY=sk_live_… \
   PAYSTACK_PLAN_PRO_MONTHLY=PLN_… \
   PAYSTACK_PLAN_ELITE_MONTHLY=PLN_… \

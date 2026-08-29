@@ -30,8 +30,19 @@ through `profiles` RLS.
 | Supabase service-role key | edge-function env only | browser, git |
 | Gemini API key | `ai-chat` / `ai-plan` function env | browser |
 | Paystack secret key | `paystack` / `paystack-webhook` env | browser |
-| Stripe secret key | `billing` / `stripe-webhook` env | browser |
-| Stripe webhook secret | `stripe-webhook` env | browser |
+| Cron secret | `send-reminders` env | browser, git |
+| Stripe secret key *(dormant)* | `billing` / `stripe-webhook` env | browser |
+| Stripe webhook secret *(dormant)* | `stripe-webhook` env | browser |
+
+`CRON_SECRET` guards the one function that runs with the service role and so
+bypasses RLS entirely. `send-reminders` fails closed — 503 when the secret is
+unset, 401 when the `x-cron-secret` header does not match — so an unset secret
+disables the job rather than leaving it open. If it was ever deployed without
+one, rotate it and update the scheduler.
+
+The Stripe rows are the dormant provider (`StripeProvider` is not imported
+anywhere; `PaystackProvider` is the live one). Leave them unset unless you
+switch processors — an unused secret is still a secret worth not having.
 
 Paystack has no separate webhook secret: it signs the raw request body with
 HMAC-SHA512 keyed on the secret key, which is why that one key covers both rows.
