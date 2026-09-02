@@ -31,7 +31,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ViewSwitcher } from '@/components/view-switcher'
 import { useModules } from '@/features/assignments/hooks'
 import { useCreateTask, useTasks, useUpdateTask } from '@/features/planner/hooks'
 import { TaskFormDialog } from '@/features/planner/task-form-dialog'
@@ -217,13 +217,16 @@ export function PlannerPage() {
       ) : null}
 
       <div data-tour="planner-views" className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs value={view} onValueChange={(value) => setView(value as PlannerView)}>
-          <TabsList>
-            <TabsTrigger value="day">Day</TabsTrigger>
-            <TabsTrigger value="week">Week</TabsTrigger>
-            <TabsTrigger value="month">Month</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <ViewSwitcher
+          label="Planner view"
+          value={view}
+          onValueChange={setView}
+          options={[
+            { value: 'day', label: 'Day' },
+            { value: 'week', label: 'Week' },
+            { value: 'month', label: 'Month' },
+          ]}
+        />
         <div className="flex items-center gap-1">
           <Button variant="outline" size="icon-sm" aria-label="Previous" onClick={() => navigate(-1)}>
             <ChevronLeft />

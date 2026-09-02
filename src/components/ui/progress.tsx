@@ -13,6 +13,10 @@ function Progress({
       data-slot="progress"
       className={cn('bg-primary/15 relative h-2 w-full overflow-hidden rounded-full', className)}
       {...props}
+      // After the spread so a caller's own label wins. role="progressbar"
+      // without a name is a serious axe violation and every bar in the app
+      // inherited it; this is the floor, not an excuse to skip a real one.
+      aria-label={props['aria-label'] ?? 'Progress'}
     >
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"

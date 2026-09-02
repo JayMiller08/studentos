@@ -132,7 +132,10 @@ function DemoBanner() {
   const { isDemo } = useAuth()
   if (!isDemo) return null
   return (
-    <div className="bg-secondary text-secondary-foreground px-4 py-1.5 text-center text-xs font-medium">
+    <div
+      role="status"
+      className="bg-secondary text-secondary-foreground px-4 py-1.5 text-center text-xs font-medium"
+    >
       Local demo mode — data is stored on this device only. Configure Supabase to enable accounts
       &amp; sync.
     </div>

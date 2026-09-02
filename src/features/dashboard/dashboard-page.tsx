@@ -164,7 +164,11 @@ export function DashboardPage() {
                   remaining · {topPriority.weight}% of grade
                 </p>
                 <div className="mt-2 flex items-center gap-2">
-                  <Progress value={topPriority.progress} className="h-1.5 max-w-56" />
+                  <Progress
+                    value={topPriority.progress}
+                    aria-label={`${topPriority.title} is ${topPriority.progress}% complete`}
+                    className="h-1.5 max-w-56"
+                  />
                   <span className="text-muted-foreground text-xs">{topPriority.progress}%</span>
                 </div>
                 {ordering.smart ? null : (
@@ -219,7 +223,11 @@ export function DashboardPage() {
                 : `${doneToday}/${todaysTasks.length} done`}
             </CardDescription>
             {todaysTasks.length > 0 ? (
-              <Progress value={percent(doneToday, todaysTasks.length)} className="h-1.5" />
+              <Progress
+                value={percent(doneToday, todaysTasks.length)}
+                aria-label={`${doneToday} of ${todaysTasks.length} tasks done today`}
+                className="h-1.5"
+              />
             ) : null}
           </CardHeader>
           <CardContent>

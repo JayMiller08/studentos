@@ -18,6 +18,8 @@ export class DbError extends Error {
   readonly operation: string
   /** Postgres SQLSTATE code (e.g. '23505' for a unique-constraint violation), when available. */
   readonly code?: string
+  /** The database's own message, without the table/operation prefix. */
+  readonly detail: string
 
   constructor(tableName: string, operation: string, cause: string, code?: string) {
     super(`${operation} on "${tableName}" failed: ${cause}`)
@@ -25,14 +27,27 @@ export class DbError extends Error {
     this.table = tableName
     this.operation = operation
     this.code = code
+    this.detail = cause
   }
 }
 
 /** Postgres SQLSTATE for "unique_violation" — e.g. clicking the same toggle twice. */
 const UNIQUE_VIOLATION = '23505'
 
+/**
+ * Raised by the `enforce_plan_limit` trigger (migration 00010). Custom class so
+ * it is distinguishable from a genuine constraint violation, and so the
+ * message — which is written for the student — can be shown as-is.
+ */
+const PLAN_LIMIT = 'PL001'
+
 export function isUniqueViolation(error: unknown): boolean {
   return error instanceof DbError && error.code === UNIQUE_VIOLATION
+}
+
+/** True when the database refused a write because the plan's cap was reached. */
+export function isPlanLimitError(error: unknown): boolean {
+  return error instanceof DbError && error.code === PLAN_LIMIT
 }
 
 /**
@@ -44,6 +59,9 @@ export function isUniqueViolation(error: unknown): boolean {
  */
 export function friendlyDbErrorMessage(error: unknown): string {
   if (isUniqueViolation(error)) return "That's already saved — no changes needed."
+  // The plan-limit trigger raises a sentence written for the student, so it is
+  // the one database message worth showing verbatim.
+  if (isPlanLimitError(error)) return (error as DbError).detail
   if (error instanceof DbError) return 'Something went wrong saving your changes. Please try again.'
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.'
 }

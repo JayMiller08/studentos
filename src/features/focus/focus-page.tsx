@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ViewSwitcher } from '@/components/view-switcher'
 import { useLogSession, useStudySessions } from '@/features/focus/hooks'
 import { type AmbientKind, useAmbientSound } from '@/features/focus/use-ambient-sound'
 import { type PomodoroPhase, usePomodoro } from '@/features/focus/use-pomodoro'
@@ -207,12 +207,15 @@ export function FocusPage() {
         <Card data-tour="focus-timer">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <Tabs value={mode} onValueChange={(value) => setMode(value as 'pomodoro' | 'deep')}>
-                <TabsList>
-                  <TabsTrigger value="pomodoro">Pomodoro</TabsTrigger>
-                  <TabsTrigger value="deep">Deep work</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <ViewSwitcher
+                label="Focus mode"
+                value={mode}
+                onValueChange={setMode}
+                options={[
+                  { value: 'pomodoro', label: 'Pomodoro' },
+                  { value: 'deep', label: 'Deep work' },
+                ]}
+              />
               {mode === 'pomodoro' ? (
                 <Button variant="ghost" size="sm" onClick={() => setSettingsOpen((open) => !open)}>
                   {pomodoro.settings.focusMinutes}/{pomodoro.settings.shortBreakMinutes} min

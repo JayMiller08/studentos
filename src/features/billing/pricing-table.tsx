@@ -46,7 +46,8 @@ export function PricingTable({
             ) : null}
             <CardHeader>
               <div className="space-y-1">
-                <h3 className="text-lg font-semibold">{plan.name}</h3>
+                {/* h2: these sit directly under the page h1, so h3 skips a level. */}
+                <h2 className="text-lg font-semibold">{plan.name}</h2>
                 <p className="text-muted-foreground text-sm">{plan.tagline}</p>
               </div>
               <div className="mt-2 flex items-baseline gap-1">

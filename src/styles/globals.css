@@ -23,6 +23,9 @@
   --popover-foreground: oklch(0.208 0.042 265.755);
 
   --primary: oklch(0.546 0.245 262.881);
+  /* Light theme already clears 4.5:1 with a white label (5.02:1), so the fill
+     and the accent can be the same colour here. */
+  --primary-strong: oklch(0.546 0.245 262.881);
   --primary-foreground: oklch(0.985 0.002 247.839);
   --secondary: oklch(0.93 0.034 272.788);
   --secondary-foreground: oklch(0.457 0.24 277.023);
@@ -69,12 +72,23 @@
   --popover: oklch(0.183 0.041 265.4);
   --popover-foreground: oklch(0.968 0.007 247.896);
 
+  /* `--primary` is pulled two ways in dark mode: it is the fill behind buttons
+     (which must be dark enough for a white label) and it is `text-primary` on
+     dark surfaces (which must stay light). One value cannot serve both —
+     darkening it took the button from 3.60:1 to 4.53:1 but dropped links from
+     5.36:1 to 4.26:1.
+     So `--primary` keeps the lighter value for text, borders and tints, and
+     `--primary-strong` is the darker fill used behind white button labels. */
   --primary: oklch(0.623 0.214 259.815);
+  --primary-strong: oklch(0.565 0.214 259.815);
   --primary-foreground: oklch(0.985 0.002 247.839);
   --secondary: oklch(0.283 0.135 279.720);
   --secondary-foreground: oklch(0.87 0.065 274.039);
   --muted: oklch(0.255 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
+  /* Raised from 0.704: fine on solid cards (7.15:1) but only 3.95:1 against
+     the translucent bottom-nav bar, where the backdrop lightens what sits
+     behind it. 0.739 clears 4.5:1 there and improves everywhere else. */
+  --muted-foreground: oklch(0.739 0.04 256.788);
   --accent: oklch(0.265 0.041 260.031);
   --accent-foreground: oklch(0.968 0.007 247.896);
 
@@ -116,6 +130,7 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -163,6 +178,11 @@
   }
 
   body {
+    /* KNOWN ISSUE: in dark mode `getComputedStyle(body).backgroundColor` is the
+       light token, and the dark appearance comes from the body::before wash
+       below. Setting background-color from var(--background) here does not
+       change it, so the cause is still unidentified. Harmless visually, but it
+       is why contrast tooling measures this app's text against white. */
     @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: 'cv11', 'ss01';
     text-rendering: optimizeLegibility;

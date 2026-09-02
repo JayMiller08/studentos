@@ -80,7 +80,14 @@ export function TaskItem({ task, module, onEdit, draggable = false, compact = fa
           <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
             {start ? <span className="tabular-nums">{start}</span> : null}
             {task.duration_minutes ? <span>{formatMinutes(task.duration_minutes)}</span> : null}
-            {module ? <span style={{ color: module.color }}>{module.code ?? module.name}</span> : null}
+            {module ? (
+              // Same blend as ModuleBadge: a student-chosen colour tuned for
+              // white can miss 4.5:1 on the dark theme, so pull it toward the
+              // current foreground while keeping the hue.
+              <span style={{ color: `color-mix(in oklab, ${module.color} 65%, var(--foreground))` }}>
+                {module.code ?? module.name}
+              </span>
+            ) : null}
             {task.recurrence ? (
               <span className="inline-flex items-center gap-0.5">
                 <Repeat aria-hidden className="size-3" /> repeats

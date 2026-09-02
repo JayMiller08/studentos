@@ -64,9 +64,11 @@ export function AssignmentCard({ assignment, module, onEdit, score }: Assignment
             ) : null}
             {done ? <Badge variant="success">{STATUS_LABEL[assignment.status]}</Badge> : null}
           </div>
-          <h3 className={cn('mt-1.5 font-medium', done && 'text-muted-foreground line-through')}>
+          {/* h2, not h3: the page's only h1 is the title, so an h3 here skips a
+              level and breaks heading navigation. */}
+          <h2 className={cn('mt-1.5 font-medium', done && 'text-muted-foreground line-through')}>
             {assignment.title}
-          </h3>
+          </h2>
           <p className={cn('text-sm', overdue ? 'text-destructive font-medium' : 'text-muted-foreground')}>
             {formatDueDistance(assignment.due_at)} · {formatMinutes(assignment.estimated_minutes)} est
             {assignment.weight > 0 ? ` · ${assignment.weight}% of grade` : ''}

@@ -8,7 +8,9 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-primary text-primary-foreground',
+        // primary-strong for the same reason as the button: this fill sits
+        // behind a white label and the lighter accent misses 4.5:1 in dark mode.
+        default: 'border-transparent bg-primary-strong text-primary-foreground',
         secondary: 'border-transparent bg-secondary text-secondary-foreground',
         destructive: 'border-transparent bg-destructive text-destructive-foreground',
         success: 'border-transparent bg-success/15 text-success dark:bg-success/20',

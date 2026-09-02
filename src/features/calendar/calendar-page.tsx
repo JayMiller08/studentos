@@ -32,7 +32,7 @@ import { PageHeader } from '@/components/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ViewSwitcher } from '@/components/view-switcher'
 import { useAssignments } from '@/features/assignments/hooks'
 import { EventFormDialog } from '@/features/calendar/event-form-dialog'
 import { useCalendarEvents, useUpdateEvent } from '@/features/calendar/hooks'
@@ -230,13 +230,16 @@ export function CalendarPage() {
       />
 
       <div data-tour="calendar-views" className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs value={view} onValueChange={(value) => setView(value as CalendarView)}>
-          <TabsList>
-            <TabsTrigger value="month">Month</TabsTrigger>
-            <TabsTrigger value="week">Week</TabsTrigger>
-            <TabsTrigger value="exams">Exams</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <ViewSwitcher
+          label="Calendar view"
+          value={view}
+          onValueChange={setView}
+          options={[
+            { value: 'month', label: 'Month' },
+            { value: 'week', label: 'Week' },
+            { value: 'exams', label: 'Exams' },
+          ]}
+        />
         {view !== 'exams' ? (
           <div className="flex items-center gap-1">
             <Button
