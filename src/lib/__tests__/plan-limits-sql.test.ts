@@ -51,8 +51,39 @@ describe('the trigger mirrors the client predicates', () => {
   it('skips rows that would not count toward the cap', () => {
     // Filing an already-submitted assignment must not be blocked just because
     // three others are still active.
-    expect(migration).toContain("if new.status not in ('not_started', 'in_progress') then")
-    expect(migration).toContain("if new.status = 'done' then")
+    expect(migration).toMatch(/if not v_now_counts then\s+return new;/)
+  })
+})
+
+describe('the cap cannot be walked around with UPDATE', () => {
+  it('fires on update as well as insert', () => {
+    // Otherwise: fill the quota, mark one done, create a replacement, then flip
+    // the done one back to active — straight past the limit without a single
+    // blocked INSERT.
+    expect(migration).toContain('before insert or update on')
+  })
+
+  it('only checks rows entering the metered set', () => {
+    // A row that already counted must not be re-checked, or every edit to an
+    // active assignment would fail once the user is at the cap.
+    expect(migration).toMatch(/if v_was_counted then\s+return new;/)
+  })
+
+  it('reads the previous state from OLD on update', () => {
+    expect(migration).toMatch(/if tg_op = 'UPDATE' then\s+v_was_counted := old\.status/)
+  })
+
+  it('treats every note as already counted on update', () => {
+    // Notes have no status, so an update never changes membership.
+    expect(migration).toContain("v_was_counted := (tg_op = 'UPDATE')")
+  })
+})
+
+describe('privileges', () => {
+  it('does not revoke on the trigger function', () => {
+    // A `returns trigger` function cannot be called directly, so a REVOKE buys
+    // nothing while gating every write to three core tables.
+    expect(migration).not.toMatch(/revoke\s+\w+\s+on function public\.enforce_plan_limit/i)
   })
 })
 
