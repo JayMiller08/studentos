@@ -10,9 +10,9 @@ import { billingService } from '@/services/billing/billing-service'
 import type { Plan } from '@/types/models'
 
 /**
- * Demo-mode simulated checkout. Stands in for Stripe's hosted page so the full
+ * Demo-mode simulated checkout. Stands in for Paystack's hosted page so the full
  * upgrade flow is testable without a payment provider. Never shown when
- * Supabase + Stripe are configured (the real hosted checkout is used instead).
+ * Supabase + Paystack are configured (the real hosted checkout is used instead).
  */
 export function MockCheckoutPage() {
   const { user, refreshProfile } = useAuth()
@@ -44,7 +44,7 @@ export function MockCheckoutPage() {
             <Lock className="text-muted-foreground size-4" /> Simulated checkout
           </CardTitle>
           <CardDescription>
-            This is a demo — no real payment is processed. Connect Stripe for live billing.
+            This is a demo — no real payment is processed. Connect Paystack for live billing.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

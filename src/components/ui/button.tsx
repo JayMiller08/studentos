@@ -8,11 +8,17 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 active:bg-primary/95',
+        // primary-strong, not primary: the fill sits behind a white label and
+        // needs 4.5:1, which the lighter accent value does not reach in dark mode.
+        default:
+          'bg-primary-strong text-primary-foreground shadow-xs hover:bg-primary-strong/90 active:bg-primary-strong/95',
         destructive:
           'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90',
+        // text-card-foreground is not cosmetic: this variant sets a background
+        // but used to inherit its text colour, so on a surface whose inherited
+        // colour was near-black the label vanished into the dark card.
         outline:
-          'border border-input bg-card shadow-xs hover:bg-accent hover:text-accent-foreground',
+          'border border-input bg-card text-card-foreground shadow-xs hover:bg-accent hover:text-accent-foreground',
         secondary: 'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
         link: 'text-primary underline-offset-4 hover:underline',

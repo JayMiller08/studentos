@@ -326,7 +326,7 @@ export function CoachPage() {
                   className={cn(
                     'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
                     mode === coachMode.id
-                      ? 'bg-primary border-primary text-primary-foreground'
+                      ? 'bg-primary-strong border-primary-strong text-primary-foreground'
                       : 'hover:bg-accent',
                   )}
                 >
@@ -469,6 +469,12 @@ export function CoachPage() {
                   type="file"
                   multiple
                   accept={ATTACHMENT_ACCEPT}
+                  // Visually hidden and driven by the button beside it, but it
+                  // is still a real form control: it needs a name, and it must
+                  // stay out of the tab order so keyboard users aren't stopped
+                  // on a control they cannot see.
+                  aria-label={`Attach a ${SUPPORTED_FORMATS}`}
+                  tabIndex={-1}
                   className="sr-only"
                   onChange={(event) => {
                     void addFiles(event.target.files)

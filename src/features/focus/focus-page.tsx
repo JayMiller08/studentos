@@ -25,9 +25,10 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ViewSwitcher } from '@/components/view-switcher'
 import { useLogSession, useStudySessions } from '@/features/focus/hooks'
 import { type AmbientKind, useAmbientSound } from '@/features/focus/use-ambient-sound'
+import { useDeepWork } from '@/features/focus/use-deep-work'
 import { type PomodoroPhase, usePomodoro } from '@/features/focus/use-pomodoro'
 import { computeFocusStats } from '@/services/focus-service'
 import { cn, formatMinutes } from '@/lib/utils'
@@ -82,84 +83,116 @@ function CircularTimer({
   )
 }
 
-function DeepWorkTimer() {
-  const logSession = useLogSession()
-  const [startedAt, setStartedAt] = React.useState<number | null>(null)
-  const [now, setNow] = React.useState(Date.now())
-  const [distractions, setDistractions] = React.useState(0)
-
-  React.useEffect(() => {
-    if (startedAt === null) return
-    const interval = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(interval)
-  }, [startedAt])
-
-  const elapsedMs = startedAt === null ? 0 : now - startedAt
+/** Elapsed milliseconds as `h:mm:ss`, dropping the hour until there is one. */
+function formatElapsed(elapsedMs: number): string {
   const hours = Math.floor(elapsedMs / 3_600_000)
   const minutes = Math.floor((elapsedMs % 3_600_000) / 60_000)
   const seconds = Math.floor((elapsedMs % 60_000) / 1000)
+  return `${hours > 0 ? `${hours}:` : ''}${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
 
-  function stop() {
-    if (startedAt === null) return
-    const totalMinutes = Math.round((Date.now() - startedAt) / 60_000)
-    if (totalMinutes >= 1) {
-      logSession.mutate(
-        {
-          startedAt: new Date(startedAt).toISOString(),
-          minutes: totalMinutes,
-          source: 'deep_work',
-          distractions,
-        },
-        { onSuccess: () => toast.success(`Deep work logged: ${formatMinutes(totalMinutes)}`) },
-      )
-    } else {
-      toast.info('Sessions under a minute are not logged')
-    }
-    setStartedAt(null)
-    setDistractions(0)
-  }
-
+function DeepWorkTimer({
+  deepWork,
+  onStop,
+}: {
+  deepWork: ReturnType<typeof useDeepWork>
+  onStop: () => void
+}) {
   return (
     <div className="flex flex-col items-center gap-6 py-4">
       <div className="text-center">
         <p className="text-5xl font-semibold tabular-nums tracking-tight">
-          {hours > 0 ? `${hours}:` : ''}
-          {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+          {formatElapsed(deepWork.elapsedMs)}
         </p>
         <p className="text-muted-foreground mt-1 text-sm">
           Deep work — open-ended, distraction-free
         </p>
       </div>
       <div className="flex items-center gap-2">
-        {startedAt === null ? (
-          <Button size="lg" onClick={() => setStartedAt(Date.now())}>
+        {!deepWork.isRunning ? (
+          <Button size="lg" onClick={deepWork.start}>
             <Play /> Start deep work
           </Button>
         ) : (
           <>
-            <Button size="lg" variant="destructive" onClick={stop}>
+            <Button size="lg" variant="destructive" onClick={onStop}>
               Stop &amp; log
             </Button>
             <Button
               variant="outline"
-              onClick={() => setDistractions((count) => count + 1)}
+              onClick={deepWork.addDistraction}
               aria-label="Log a distraction"
             >
-              <Zap /> Distracted ({distractions})
+              <Zap /> Distracted ({deepWork.distractions})
             </Button>
           </>
         )}
       </div>
+      {deepWork.isRunning ? (
+        <p className="text-muted-foreground text-center text-xs">
+          Keeps running if you switch tabs or leave the page — stop it here when you are done.
+        </p>
+      ) : null}
     </div>
   )
+}
+
+type FocusMode = 'pomodoro' | 'deep'
+
+const MODE_KEY = 'studentos.focus.mode'
+
+/** Reopen the page on the timer the student left it on, not always pomodoro. */
+function loadMode(): FocusMode {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'deep' ? 'deep' : 'pomodoro'
+  } catch {
+    return 'pomodoro'
+  }
 }
 
 export function FocusPage() {
   const { data: sessions = [] } = useStudySessions()
   const logSession = useLogSession()
   const ambient = useAmbientSound()
-  const [mode, setMode] = React.useState<'pomodoro' | 'deep'>('pomodoro')
+  const deepWork = useDeepWork()
+  const [mode, setMode] = React.useState<FocusMode>(loadMode)
   const [settingsOpen, setSettingsOpen] = React.useState(false)
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(MODE_KEY, mode)
+    } catch {
+      // Remembering the tab is a convenience, never a reason to fail.
+    }
+  }, [mode])
+
+  React.useEffect(() => {
+    if (deepWork.staleSessionDropped) {
+      // Stable id: one notice per abandoned session, however many times the
+      // effect runs (StrictMode double-invokes it in development).
+      toast.info('A deep work timer had been running over 12 hours, so it was not logged.', {
+        id: 'deep-work-stale',
+      })
+    }
+  }, [deepWork.staleSessionDropped])
+
+  function stopDeepWork() {
+    const finished = deepWork.stop()
+    if (!finished) return
+    if (finished.minutes < 1) {
+      toast.info('Sessions under a minute are not logged')
+      return
+    }
+    logSession.mutate(
+      {
+        startedAt: finished.startedAtIso,
+        minutes: finished.minutes,
+        source: 'deep_work',
+        distractions: finished.distractions,
+      },
+      { onSuccess: () => toast.success(`Deep work logged: ${formatMinutes(finished.minutes)}`) },
+    )
+  }
 
   const pomodoro = usePomodoro({
     onPhaseComplete: (result) => {
@@ -187,6 +220,15 @@ export function FocusPage() {
     },
   })
 
+  /** Two timers logging at once would count the same hour twice. */
+  function startPomodoro() {
+    if (deepWork.isRunning) {
+      toast.error('Stop your deep work session first — only one timer can run at a time.')
+      return
+    }
+    pomodoro.start()
+  }
+
   const stats = React.useMemo(() => computeFocusStats(sessions), [sessions])
 
   const statCards = [
@@ -207,12 +249,15 @@ export function FocusPage() {
         <Card data-tour="focus-timer">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <Tabs value={mode} onValueChange={(value) => setMode(value as 'pomodoro' | 'deep')}>
-                <TabsList>
-                  <TabsTrigger value="pomodoro">Pomodoro</TabsTrigger>
-                  <TabsTrigger value="deep">Deep work</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <ViewSwitcher
+                label="Focus mode"
+                value={mode}
+                onValueChange={setMode}
+                options={[
+                  { value: 'pomodoro', label: 'Pomodoro' },
+                  { value: 'deep', label: 'Deep work' },
+                ]}
+              />
               {mode === 'pomodoro' ? (
                 <Button variant="ghost" size="sm" onClick={() => setSettingsOpen((open) => !open)}>
                   {pomodoro.settings.focusMinutes}/{pomodoro.settings.shortBreakMinutes} min
@@ -223,6 +268,27 @@ export function FocusPage() {
           <CardContent>
             {mode === 'pomodoro' ? (
               <div className="flex flex-col items-center gap-6">
+                {/* A deep work session now survives leaving this tab, so it has
+                    to stay visible from here — otherwise it runs invisibly and
+                    a pomodoro started on top of it double-counts the same time. */}
+                {deepWork.isRunning ? (
+                  <div
+                    role="status"
+                    className="border-warning/40 bg-warning/8 flex w-full flex-wrap items-center gap-3 rounded-lg border p-3"
+                  >
+                    <Timer aria-hidden className="text-warning size-4 shrink-0" />
+                    <p className="flex-1 text-sm">
+                      Deep work is still running —{' '}
+                      <span className="font-semibold tabular-nums">
+                        {formatElapsed(deepWork.elapsedMs)}
+                      </span>
+                    </p>
+                    <Button size="sm" variant="destructive" onClick={stopDeepWork}>
+                      Stop &amp; log
+                    </Button>
+                  </div>
+                ) : null}
+
                 {settingsOpen ? (
                   <div className="grid w-full max-w-sm grid-cols-3 gap-3">
                     {(
@@ -266,7 +332,7 @@ export function FocusPage() {
                       <Pause /> Pause
                     </Button>
                   ) : (
-                    <Button size="lg" onClick={pomodoro.start}>
+                    <Button size="lg" onClick={startPomodoro} disabled={deepWork.isRunning}>
                       <Play /> {pomodoro.status === 'paused' ? 'Resume' : 'Start focus'}
                     </Button>
                   )}
@@ -293,7 +359,7 @@ export function FocusPage() {
                 </p>
               </div>
             ) : (
-              <DeepWorkTimer />
+              <DeepWorkTimer deepWork={deepWork} onStop={stopDeepWork} />
             )}
           </CardContent>
         </Card>

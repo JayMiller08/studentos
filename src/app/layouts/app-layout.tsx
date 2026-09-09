@@ -11,6 +11,7 @@ import { InstallBanner } from '@/features/pwa/install-banner'
 import { ProductTour } from '@/features/tour/product-tour'
 import { TourButton } from '@/features/tour/tour-button'
 import { TourProvider } from '@/features/tour/tour-provider'
+import { WhatsNewDialog } from '@/features/updates/whats-new-dialog'
 import { ConnectionBanner } from '@/components/connection-banner'
 import { CookieConsent } from '@/components/cookie-consent'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -132,7 +133,10 @@ function DemoBanner() {
   const { isDemo } = useAuth()
   if (!isDemo) return null
   return (
-    <div className="bg-secondary text-secondary-foreground px-4 py-1.5 text-center text-xs font-medium">
+    <div
+      role="status"
+      className="bg-secondary text-secondary-foreground px-4 py-1.5 text-center text-xs font-medium"
+    >
       Local demo mode — data is stored on this device only. Configure Supabase to enable accounts
       &amp; sync.
     </div>
@@ -247,6 +251,7 @@ export function AppLayout() {
         <MobileBottomNav />
         <InstallBanner />
         <ProductTour />
+        <WhatsNewDialog />
         <CookieConsent />
       </div>
     </TourProvider>

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { DbError, friendlyDbErrorMessage, isUniqueViolation } from '@/services/db'
+import {
+  DbError,
+  friendlyDbErrorMessage,
+  isPlanLimitError,
+  isUniqueViolation,
+} from '@/services/db'
 
 describe('isUniqueViolation', () => {
   it('is true for a Postgres unique_violation (23505)', () => {
@@ -47,5 +52,23 @@ describe('friendlyDbErrorMessage', () => {
 
   it('has a safe default for non-Error values', () => {
     expect(friendlyDbErrorMessage('boom')).toBe('Something went wrong. Please try again.')
+  })
+
+  it('shows the plan-limit message verbatim, without the table prefix', () => {
+    // The trigger raises a sentence written for the student. Swallowing it
+    // behind "something went wrong" would leave a blocked user with no idea
+    // that they hit a cap or that upgrading lifts it.
+    const raised = 'Your plan includes up to 15 notes. Upgrade to Student Pro for unlimited notes.'
+    const error = new DbError('notes', 'insert', raised, 'PL001')
+
+    expect(isPlanLimitError(error)).toBe(true)
+    expect(friendlyDbErrorMessage(error)).toBe(raised)
+    // The wrapper's own prefix must not leak into what the student reads.
+    expect(friendlyDbErrorMessage(error)).not.toMatch(/insert on|"notes"/)
+  })
+
+  it('does not mistake other database errors for a plan limit', () => {
+    expect(isPlanLimitError(new DbError('notes', 'insert', 'boom', '23505'))).toBe(false)
+    expect(isPlanLimitError(new Error('boom'))).toBe(false)
   })
 })

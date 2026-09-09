@@ -92,6 +92,20 @@ export const notesService = {
   },
 }
 
+/**
+ * A plain-text snippet of a note's body, for cards and lists.
+ *
+ * Shared rather than inlined per caller: the markup a note is written in is
+ * about to change, and every preview should stop stripping hashes on the same
+ * day the editor stops producing them.
+ */
+export function notePreview(note: Pick<Note, 'content_md'>): string {
+  return note.content_md
+    .replace(/[#*_>`[\]]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 /** Case-insensitive search across title, content and tags. */
 export function searchNotes(noteList: Note[], query: string): Note[] {
   const trimmed = query.trim().toLowerCase()

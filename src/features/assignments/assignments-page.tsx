@@ -6,7 +6,7 @@ import { QuotaMeter } from '@/components/quota-meter'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ViewSwitcher } from '@/components/view-switcher'
 import { AssignmentCard } from '@/features/assignments/assignment-card'
 import { AssignmentFormDialog } from '@/features/assignments/assignment-form-dialog'
 import { useAssignments, useModules } from '@/features/assignments/hooks'
@@ -109,17 +109,18 @@ export function AssignmentsPage() {
         </Card>
       ) : null}
 
-      <Tabs
-        data-tour="assignment-filters"
-        value={filter}
-        onValueChange={(value) => setFilter(value as FilterTab)}
-      >
-        <TabsList>
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="done">Completed</TabsTrigger>
-          <TabsTrigger value="all">All</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div data-tour="assignment-filters">
+        <ViewSwitcher
+          label="Filter assignments"
+          value={filter}
+          onValueChange={setFilter}
+          options={[
+            { value: 'active', label: 'Active' },
+            { value: 'done', label: 'Completed' },
+            { value: 'all', label: 'All' },
+          ]}
+        />
+      </div>
 
       {isLoading ? (
         <div className="space-y-3">

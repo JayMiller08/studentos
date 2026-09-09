@@ -25,7 +25,13 @@ export function CookieConsent() {
   if (!show) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 p-4 border-t bg-background z-50 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div
+      // A landmark with a name, so the banner is reachable by rotor and does
+      // not read as orphaned content outside every region.
+      role="region"
+      aria-label="Cookie notice"
+      className="fixed bottom-0 left-0 right-0 p-4 border-t bg-background z-50 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4"
+    >
       <div className="text-sm text-muted-foreground flex-1">
         We use cookies to improve your experience. By continuing to visit this site you agree to our use of cookies.
         Learn more in our{' '}

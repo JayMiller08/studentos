@@ -116,10 +116,6 @@ npx supabase functions deploy ai-plan            # JWT-verified (Pro-gated)
 npx supabase functions deploy paystack           # JWT-verified
 npx supabase functions deploy paystack-webhook --no-verify-jwt
 npx supabase functions deploy send-reminders --no-verify-jwt
-
-# Stripe is kept for markets Paystack doesn't serve; skip unless you switch to it.
-npx supabase functions deploy billing            # JWT-verified
-npx supabase functions deploy stripe-webhook --no-verify-jwt
 ```
 
 `supabase/config.toml` declares the daily cron schedule for `send-reminders`.

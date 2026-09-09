@@ -289,8 +289,8 @@ export const PAGE_TOURS: PageTour[] = [
       },
       {
         target: ACTIONS,
-        title: 'Markdown, with history',
-        body: 'Write in Markdown for headings, lists and code. Earlier versions are kept, so an accidental delete is recoverable.',
+        title: 'Just start writing',
+        body: 'Format with the toolbar — headings, lists, checklists, quotes — no special characters to memorise. Earlier versions are kept, so an accidental delete is recoverable.',
       },
     ],
   },
