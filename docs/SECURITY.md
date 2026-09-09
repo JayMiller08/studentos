@@ -31,8 +31,6 @@ through `profiles` RLS.
 | Gemini API key | `ai-chat` / `ai-plan` function env | browser |
 | Paystack secret key | `paystack` / `paystack-webhook` env | browser |
 | Cron secret | `send-reminders` env | browser, git |
-| Stripe secret key *(dormant)* | `billing` / `stripe-webhook` env | browser |
-| Stripe webhook secret *(dormant)* | `stripe-webhook` env | browser |
 
 `CRON_SECRET` guards the one function that runs with the service role and so
 bypasses RLS entirely. `send-reminders` fails closed — 503 when the secret is

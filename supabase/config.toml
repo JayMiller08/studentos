@@ -18,14 +18,6 @@ verify_jwt = true
 # verification must be OFF or every event is rejected before it is checked.
 verify_jwt = false
 
-# ── Payments: Stripe, retained for markets Paystack doesn't serve ───────────
-[functions.billing]
-verify_jwt = true
-
-[functions.stripe-webhook]
-# Stripe signs requests; JWT verification must be OFF for the webhook.
-verify_jwt = false
-
 [functions.send-reminders]
 verify_jwt = false
 # Daily at 06:00 UTC — generate assignment/exam reminders server-side.

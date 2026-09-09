@@ -32,7 +32,7 @@ const routes: RouteObject[] = [
     },
   },
 
-  // Demo-mode simulated checkout (never used when Stripe is configured).
+  // Demo-mode simulated checkout (never used when Paystack is configured).
   {
     path: '/checkout/mock',
     lazy: async () => {

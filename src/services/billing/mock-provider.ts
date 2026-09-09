@@ -10,7 +10,7 @@ import type {
  * Demo-mode billing provider.
  *
  * No real payments — routes to an in-app simulated checkout page so the whole
- * upgrade → active-subscription → manage flow is exercisable without Stripe.
+ * upgrade → active-subscription → manage flow is exercisable without Paystack.
  */
 export class MockProvider implements BillingProvider {
   readonly id = 'mock' as const

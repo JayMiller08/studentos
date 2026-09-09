@@ -94,7 +94,7 @@ export function BillingPage() {
     setBusyPlan(plan)
     try {
       await billingService.startCheckout(plan)
-      // Real Stripe redirects away; the mock provider navigates in-app.
+      // Real Paystack redirects away; the mock provider navigates in-app.
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not start checkout')
       setBusyPlan(null)

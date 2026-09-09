@@ -3,7 +3,7 @@ import type { Plan } from '@/types/models'
 /**
  * Payment provider abstraction.
  *
- * The rest of the app depends only on this interface — never on Stripe
+ * The rest of the app depends only on this interface — never on Paystack
  * directly. Swapping to Paddle, LemonSqueezy, Paystack, etc. is implementing
  * this port and changing one line in `billing-service.ts`.
  */
@@ -32,7 +32,7 @@ export interface CheckoutConfirmation {
 }
 
 export interface BillingProvider {
-  readonly id: 'stripe' | 'paystack' | 'mock'
+  readonly id: 'paystack' | 'mock'
   /** Whether checkout is live. When false the UI shows a "coming soon" state
    * instead of attempting a charge. */
   readonly available: boolean
@@ -46,7 +46,7 @@ export interface BillingProvider {
    * Paystack appends a transaction `reference` to the callback URL; verifying
    * it server-side upgrades the account immediately instead of leaving the
    * student on a stale Free plan until the webhook lands. Providers whose
-   * webhook is the only signal (Stripe) omit this.
+   * webhook is the only signal omit this.
    *
    * The reference is only ever an identifier — the outcome is read from the
    * provider, never from the browser.
