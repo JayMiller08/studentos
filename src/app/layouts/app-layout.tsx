@@ -11,6 +11,7 @@ import { InstallBanner } from '@/features/pwa/install-banner'
 import { ProductTour } from '@/features/tour/product-tour'
 import { TourButton } from '@/features/tour/tour-button'
 import { TourProvider } from '@/features/tour/tour-provider'
+import { WhatsNewDialog } from '@/features/updates/whats-new-dialog'
 import { ConnectionBanner } from '@/components/connection-banner'
 import { CookieConsent } from '@/components/cookie-consent'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -250,6 +251,7 @@ export function AppLayout() {
         <MobileBottomNav />
         <InstallBanner />
         <ProductTour />
+        <WhatsNewDialog />
         <CookieConsent />
       </div>
     </TourProvider>

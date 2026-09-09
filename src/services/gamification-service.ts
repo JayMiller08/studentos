@@ -1,3 +1,4 @@
+import { effectiveStreak } from '@/lib/streak'
 import { byUser, table } from '@/services/db'
 import { profileService } from '@/services/profile-service'
 import type { Achievement, BadgeDef, Profile } from '@/types/models'
@@ -135,9 +136,11 @@ export const gamificationService = {
       badgeChecks.push({ id: 'note-taker', passes: async () => (await countOf('notes')) >= 10 })
     }
 
-    // Streak badges piggyback on any event.
-    if (profile.current_streak >= 7) badgeChecks.push({ id: 'streak-7', passes: async () => true })
-    if (profile.current_streak >= 30) badgeChecks.push({ id: 'streak-30', passes: async () => true })
+    // Streak badges piggyback on any event. Derived rather than read off the
+    // profile so a streak the student actually lost cannot still unlock these.
+    const streak = effectiveStreak(profile)
+    if (streak >= 7) badgeChecks.push({ id: 'streak-7', passes: async () => true })
+    if (streak >= 30) badgeChecks.push({ id: 'streak-30', passes: async () => true })
 
     for (const check of badgeChecks) {
       if (await check.passes()) {

@@ -1,4 +1,11 @@
-import { differenceInCalendarDays, format, parseISO, startOfDay, endOfDay } from 'date-fns'
+import {
+  differenceInCalendarDays,
+  format,
+  formatDistanceToNow,
+  parseISO,
+  startOfDay,
+  endOfDay,
+} from 'date-fns'
 import {
   ArrowRight,
   BookOpen,
@@ -11,6 +18,7 @@ import {
   Plus,
   Quote,
   Sparkles,
+  StickyNote,
   Timer,
   UserRoundPen,
 } from 'lucide-react'
@@ -30,6 +38,7 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { useAssignments, useModules } from '@/features/assignments/hooks'
 import { useCalendarEvents } from '@/features/calendar/hooks'
+import { useNotes } from '@/features/notes/hooks'
 import { useStudySessions } from '@/features/focus/hooks'
 import { ModuleBadge } from '@/features/assignments/module-badge'
 import { PriorityBadge } from '@/features/assignments/priority-badge'
@@ -38,10 +47,12 @@ import { usePlan } from '@/hooks/use-plan'
 import { usePwaInstall } from '@/hooks/use-pwa-install'
 import { getMissingProfileFields } from '@/lib/profile-completeness'
 import { quoteOfTheDay } from '@/lib/quotes'
+import { effectiveStreak } from '@/lib/streak'
 import { cn, formatDueDistance, formatMinutes, percent, todayKey } from '@/lib/utils'
 import { isActiveAssignment, isOverdue } from '@/services/assignments-service'
 import { calendarService } from '@/services/calendar-service'
 import { computeFocusStats } from '@/services/focus-service'
+import { notePreview } from '@/services/notes-service'
 import { orderAssignments } from '@/services/priority-engine'
 
 function greeting(): string {
@@ -62,6 +73,7 @@ export function DashboardPage() {
   const { data: tasks = [] } = useTasks()
   const { data: events = [] } = useCalendarEvents()
   const { data: sessions = [] } = useStudySessions()
+  const { data: notes = [] } = useNotes()
   const toggleTask = useToggleTask()
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'there'
@@ -96,6 +108,11 @@ export function DashboardPage() {
 
   const stats = React.useMemo(() => computeFocusStats(sessions), [sessions])
   const missingProfileFields = getMissingProfileFields(profile)
+  // Derived, not read straight off the profile: the stored counter is stale the
+  // moment a student stops showing up. See effectiveStreak.
+  const streak = effectiveStreak(profile)
+  // notesService already orders by updated_at, so these are the latest saves.
+  const recentNotes = notes.slice(0, 4)
 
   return (
     <div className="space-y-6">
@@ -103,9 +120,9 @@ export function DashboardPage() {
         title={`${greeting()}, ${firstName}`}
         description={format(today, 'EEEE, d MMMM')}
         actions={
-          (profile?.current_streak ?? 0) > 0 ? (
+          streak > 0 ? (
             <Badge variant="warning" className="px-3 py-1 text-sm">
-              <Flame className="size-4" /> {profile?.current_streak}-day streak
+              <Flame className="size-4" /> {streak}-day streak
             </Badge>
           ) : undefined
         }
@@ -383,6 +400,52 @@ export function DashboardPage() {
               <p className="text-xl font-semibold">{stats.currentStreakDays}d</p>
               <p className="text-muted-foreground text-xs">Focus streak</p>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Recently saved notes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <StickyNote aria-hidden className="text-primary size-4" /> Recent notes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentNotes.length === 0 ? (
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/app/notes">
+                  <Plus /> Write your first note
+                </Link>
+              </Button>
+            ) : (
+              <ul className="space-y-1">
+                {recentNotes.map((note) => (
+                  <li key={note.id}>
+                    <Link
+                      to={`/app/notes?note=${note.id}`}
+                      className="hover:bg-accent block rounded-lg p-2 transition-colors"
+                    >
+                      <div className="flex items-baseline gap-2">
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                          {note.title || 'Untitled'}
+                        </span>
+                        <span className="text-muted-foreground/70 shrink-0 text-[11px]">
+                          {formatDistanceToNow(parseISO(note.updated_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground truncate text-xs">
+                        {notePreview(note) || 'Empty note'}
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+                <li>
+                  <Button asChild variant="link" size="sm" className="px-2">
+                    <Link to="/app/notes">Open notes</Link>
+                  </Button>
+                </li>
+              </ul>
+            )}
           </CardContent>
         </Card>
 

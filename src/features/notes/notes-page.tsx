@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import * as React from 'react'
 import ReactMarkdown from 'react-markdown'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@/app/providers/auth-provider'
 import { EmptyState } from '@/components/empty-state'
@@ -48,7 +49,7 @@ import { useAwardXp } from '@/hooks/use-award-xp'
 import { usePlan } from '@/hooks/use-plan'
 import { queryKeys } from '@/lib/query-keys'
 import { cn } from '@/lib/utils'
-import { notesService, searchNotes } from '@/services/notes-service'
+import { notePreview, notesService, searchNotes } from '@/services/notes-service'
 import type { Note, NoteFolder, NoteVersion } from '@/types/models'
 
 /**
@@ -96,6 +97,22 @@ export function NotesPage() {
   const [query, setQuery] = React.useState('')
   const [activeFolder, setActiveFolder] = React.useState<string | 'all' | 'unfiled'>('all')
   const [editingNote, setEditingNote] = React.useState<Note | null>(null)
+
+  // Opened from a link elsewhere in the app (the dashboard's recent notes).
+  // Consumed once and cleared, so closing the editor does not immediately
+  // reopen it and the URL stops referring to a note you are no longer editing.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedNoteId = searchParams.get('note')
+  // Resolved outside the effect so it depends on the note itself, whose identity
+  // is stable across renders, rather than on the notes array.
+  const requestedNote = requestedNoteId
+    ? (notes.find((note) => note.id === requestedNoteId) ?? null)
+    : null
+  React.useEffect(() => {
+    if (!requestedNote) return
+    setEditingNote(requestedNote)
+    setSearchParams({}, { replace: true })
+  }, [requestedNote, setSearchParams])
 
   const invalidateNotes = () =>
     void queryClient.invalidateQueries({ queryKey: queryKeys.notes(user!.id) })
@@ -319,7 +336,7 @@ function NoteCard({
   onTogglePin: () => void
   onDelete: () => void
 }) {
-  const preview = note.content_md.replace(/[#*_>`[\]]/g, '').trim()
+  const preview = notePreview(note)
   return (
     <Card className="group hover:border-primary/40 gap-2 py-4 transition-colors">
       <CardContent className="space-y-2">

@@ -15,6 +15,7 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { queryKeys } from '@/lib/query-keys'
 import { cn } from '@/lib/utils'
+import { effectiveStreak } from '@/lib/streak'
 import { BADGES, gamificationService, levelProgress } from '@/services/gamification-service'
 
 export function AchievementsPage() {
@@ -41,7 +42,7 @@ export function AchievementsPage() {
   const heroStats = [
     { icon: Star, label: 'Level', value: String(progress.level) },
     { icon: Zap, label: 'Total XP', value: (profile?.xp ?? 0).toLocaleString() },
-    { icon: Flame, label: 'Day streak', value: String(profile?.current_streak ?? 0) },
+    { icon: Flame, label: 'Day streak', value: String(effectiveStreak(profile)) },
     { icon: Trophy, label: 'Badges', value: `${unlockedCount}/${BADGES.length}` },
   ]
 
