@@ -3,11 +3,10 @@ import { formatDistanceToNow, parseISO } from 'date-fns'
 import {
   Cloud,
   CloudOff,
-  Eye,
+  Code2,
   FileText,
   FolderPlus,
   History,
-  Pencil,
   Pin,
   PinOff,
   Plus,
@@ -17,7 +16,6 @@ import {
   X,
 } from 'lucide-react'
 import * as React from 'react'
-import ReactMarkdown from 'react-markdown'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@/app/providers/auth-provider'
@@ -45,6 +43,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { useNoteFolders, useNotes } from '@/features/notes/hooks'
+import { RichNoteEditor } from '@/features/notes/rich-note-editor'
 import { useAwardXp } from '@/hooks/use-award-xp'
 import { usePlan } from '@/hooks/use-plan'
 import { queryKeys } from '@/lib/query-keys'
@@ -171,7 +170,7 @@ export function NotesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Notes"
-        description="Markdown notes with folders, tags and version history"
+        description="Write, organise and search your notes — with version history"
         actions={
           <>
             <SyncStatus />
@@ -247,7 +246,7 @@ export function NotesPage() {
               description={
                 query
                   ? 'Try a different search term.'
-                  : 'Capture lecture notes, summaries and ideas in Markdown.'
+                  : 'Capture lecture notes, summaries and ideas — formatting is a click away.'
               }
               action={
                 !query ? (
@@ -376,6 +375,22 @@ function NoteCard({
 
 const UNFILED = 'unfiled'
 
+const MARKDOWN_MODE_KEY = 'studentos.notes.markdown-mode'
+
+/**
+ * Whether to show the raw Markdown source instead of the rich editor.
+ *
+ * Off by default — the whole point is that a student should not need to know
+ * Markdown exists — but remembered for the people who prefer writing it.
+ */
+function loadMarkdownMode(): boolean {
+  try {
+    return localStorage.getItem(MARKDOWN_MODE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
 function NoteEditor({
   note,
   folders,
@@ -392,9 +407,26 @@ function NoteEditor({
   const [content, setContent] = React.useState(note.content_md)
   const [tags, setTags] = React.useState<string[]>(note.tags)
   const [tagDraft, setTagDraft] = React.useState('')
-  const [mode, setMode] = React.useState<'edit' | 'preview'>('edit')
+  const [markdownMode, setMarkdownMode] = React.useState(loadMarkdownMode)
   const [historyOpen, setHistoryOpen] = React.useState(false)
-  const savedRef = React.useRef({ title: note.title, content: note.content_md, tags: note.tags })
+  /**
+   * The last state written to the database.
+   *
+   * Keyed `content_md` to match the row: this object is spread over `note` to
+   * tell the service what the note looked like before this save, and a mismatched
+   * key silently left `content_md` at the value it had when the dialog opened —
+   * so every snapshot in version history was another copy of that same original
+   * text rather than the state it replaced.
+   */
+  const savedRef = React.useRef({ title: note.title, content_md: note.content_md, tags: note.tags })
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(MARKDOWN_MODE_KEY, String(markdownMode))
+    } catch {
+      // A remembered preference is a convenience, never a reason to fail.
+    }
+  }, [markdownMode])
 
   async function moveToFolder(value: string) {
     const folderId = value === UNFILED ? null : value
@@ -407,13 +439,13 @@ function NoteEditor({
     const timer = setTimeout(() => {
       const changed =
         title !== savedRef.current.title ||
-        content !== savedRef.current.content ||
+        content !== savedRef.current.content_md ||
         tags.join(',') !== savedRef.current.tags.join(',')
       if (!changed) return
       void notesService
         .save({ ...note, ...savedRef.current }, { title, content_md: content, tags })
         .then(() => {
-          savedRef.current = { title, content, tags }
+          savedRef.current = { title, content_md: content, tags }
           onSaved()
         })
     }, 800)
@@ -430,7 +462,7 @@ function NoteEditor({
     await notesService.restoreVersion({ ...note, title, content_md: content, tags }, version)
     setTitle(version.title)
     setContent(version.content_md)
-    savedRef.current = { title: version.title, content: version.content_md, tags }
+    savedRef.current = { title: version.title, content_md: version.content_md, tags }
     onSaved()
     setHistoryOpen(false)
     toast.success('Version restored')
@@ -441,7 +473,7 @@ function NoteEditor({
       <DialogContent className="flex h-[85vh] max-w-3xl flex-col gap-3 sm:max-w-3xl">
         <DialogHeader className="sr-only">
           <DialogTitle>Edit note</DialogTitle>
-          <DialogDescription>Markdown editor with live preview</DialogDescription>
+          <DialogDescription>Write and format your note; changes save automatically</DialogDescription>
         </DialogHeader>
 
         <Input
@@ -479,11 +511,14 @@ function NoteEditor({
         </div>
 
         <div className="flex items-center gap-1.5 border-y py-1.5">
-          <Button variant={mode === 'edit' ? 'secondary' : 'ghost'} size="sm" onClick={() => setMode('edit')}>
-            <Pencil /> Edit
-          </Button>
-          <Button variant={mode === 'preview' ? 'secondary' : 'ghost'} size="sm" onClick={() => setMode('preview')}>
-            <Eye /> Preview
+          <Button
+            variant={markdownMode ? 'secondary' : 'ghost'}
+            size="sm"
+            aria-pressed={markdownMode}
+            title="Edit the raw Markdown behind this note"
+            onClick={() => setMarkdownMode((on) => !on)}
+          >
+            <Code2 /> Markdown
           </Button>
           {folders.length > 0 ? (
             <Select value={note.folder_id ?? UNFILED} onValueChange={(value) => void moveToFolder(value)}>
@@ -515,20 +550,20 @@ function NoteEditor({
           </Sheet>
         </div>
 
-        {mode === 'edit' ? (
+        {markdownMode ? (
           <Textarea
             value={content}
             onChange={(event) => setContent(event.target.value)}
             placeholder="Write in Markdown…  # Heading, **bold**, - lists, `code`"
-            aria-label="Note content"
+            aria-label="Note content, Markdown source"
             className="flex-1 resize-none border-0 px-0 font-mono text-sm shadow-none focus-visible:ring-0"
           />
         ) : (
-          <ScrollArea className="flex-1">
-            <div className="prose prose-sm dark:prose-invert max-w-none pr-3">
-              <ReactMarkdown>{content || '*Nothing to preview yet.*'}</ReactMarkdown>
-            </div>
-          </ScrollArea>
+          <RichNoteEditor
+            value={content}
+            onChange={setContent}
+            placeholder="Start writing. Use the buttons above to format — no special characters needed."
+          />
         )}
 
         <p className="text-muted-foreground text-center text-xs">Changes save automatically</p>

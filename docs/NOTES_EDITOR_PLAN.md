@@ -1,6 +1,6 @@
 # Plan — making notes writable without Markdown
 
-**Status:** proposed, not yet built
+**Status:** built and shipped, 9 September 2026
 **Prepared:** 9 September 2026
 
 ## Why
@@ -158,3 +158,51 @@ opens it directly via `/app/notes?note=<id>`. Previews route through the shared
 `notePreview()` helper in `notes-service.ts`, which is deliberately the single
 place that strips Markdown syntax — when the editor changes, that is the one
 function that needs to change with it.
+
+
+---
+
+# Outcome
+
+Built as planned, storing Markdown. What the plan did not predict:
+
+**The Phase 0 spike earned its place.** The first round trip silently **deleted
+images** — `markdown-it` parsed `![alt](url)`, the schema had no image node to
+put it in, and the note came back without it. A note whose only content was a
+diagram would have opened empty. Adding `@tiptap/extension-image` fixed it, and
+`markdown-roundtrip.test.ts` now fails if it ever regresses.
+
+The spike also reframed the acceptance test. Byte-identity was the wrong bar:
+opening a note canonicalises its Markdown (`A*` becomes `A\*`, a two-space line
+break becomes a backslash) and that is correct — an unescaped asterisk *is*
+emphasis syntax. The property that matters is **stability**, that a second pass
+changes nothing further, and every construct passes it. `Underline` was dropped
+from StarterKit for the same reason: Markdown cannot express it, so `Ctrl+U`
+would have applied formatting that vanished on save.
+
+**A persistent toolbar replaced the planned bubble menu**, and the slash menu was
+dropped. Both were listed for discoverability, but a menu you summon by typing
+`/` is a power-user affordance — it asks the student to know a command exists.
+The audience for this work is the student who did not know `#` made a heading.
+Buttons that are simply visible serve them better; the bubble menu and slash
+menu can follow if anyone asks.
+
+**Bundle cost was higher than estimated:** ~195 KB gzipped, not the ~100 KB
+guessed, all of it inside the lazy `notes-page` chunk. Verified absent from the
+eagerly-loaded `index` and `lib` chunks, so a student who never opens Notes
+pays nothing.
+
+**Two bugs found while verifying, neither caused by this work:**
+
+- Version history stored the *original* note in every snapshot instead of the
+  state being replaced, because `savedRef` keyed content as `content` while the
+  row uses `content_md`, so the spread never updated it. Five edits produced
+  five identical copies and no intermediate history.
+- `SheetContent` and `DialogContent` set `bg-card` with no paired
+  `text-card-foreground`. In dark mode the version history panel rendered
+  near-black text on a near-black card — a contrast ratio of 1.05:1, i.e.
+  invisible. `PopoverContent` had always paired them correctly.
+
+Both are fixed. `/app/notes` now reports zero critical and zero serious axe
+violations with the editor and history panel open; one moderate `heading-order`
+remains, pre-existing, from note cards using `<h3>`.

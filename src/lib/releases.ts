@@ -30,8 +30,13 @@ export interface Release {
 export const RELEASES: Release[] = [
   {
     date: '2026-09-09',
-    title: 'Timers that stay put, streaks that tell the truth',
+    title: 'Write notes without the syntax',
     changes: [
+      {
+        kind: 'improved',
+        title: 'Notes are now what-you-see-is-what-you-get',
+        body: 'No more typing # and ** to get headings and bold, and no more flipping to a preview to check it worked. Use the toolbar — headings, lists, checklists, quotes, links — and your note looks right while you write it. Everything you had already written is untouched, and if you liked writing Markdown, the Markdown button keeps it one click away.',
+      },
       {
         kind: 'fixed',
         title: 'Deep work no longer loses your session',

@@ -28,7 +28,7 @@ Built as a production-grade, venture-backed SaaS product designed to scale to
 | **Analytics** | Productivity score, focus/pipeline charts, Pro-gated weekly trends |
 | **Habits** | Daily/weekly/monthly cadences, streaks, completion rates, 12-week heatmap |
 | **Budget** | Income/expense tracking, category breakdown, month-end projection & alerts, savings goals |
-| **Notes** | Markdown editor with live preview, folders, tags, search, autosave, version history |
+| **Notes** | Rich text editor with formatting toolbar (Markdown source available), folders, tags, search, autosave, version history |
 | **Gamification** | XP, quadratic level curve, 13 badges, achievements |
 | **Billing** | Provider-abstracted (Paystack, ZAR) subscriptions, plan gating, self-serve management |
 | **Admin** | User/plan management, feature flags, announcements, support tickets |
