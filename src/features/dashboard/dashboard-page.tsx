@@ -17,6 +17,7 @@ import {
   ListTodo,
   Plus,
   Quote,
+  Snowflake,
   Sparkles,
   StickyNote,
   Timer,
@@ -47,7 +48,7 @@ import { usePlan } from '@/hooks/use-plan'
 import { usePwaInstall } from '@/hooks/use-pwa-install'
 import { getMissingProfileFields } from '@/lib/profile-completeness'
 import { quoteOfTheDay } from '@/lib/quotes'
-import { effectiveStreak } from '@/lib/streak'
+import { effectiveStreak, heldFreezes, isStreakProtected } from '@/lib/streak'
 import { cn, formatDueDistance, formatMinutes, percent, todayKey } from '@/lib/utils'
 import { isActiveAssignment, isOverdue } from '@/services/assignments-service'
 import { calendarService } from '@/services/calendar-service'
@@ -111,6 +112,8 @@ export function DashboardPage() {
   // Derived, not read straight off the profile: the stored counter is stale the
   // moment a student stops showing up. See effectiveStreak.
   const streak = effectiveStreak(profile)
+  const streakProtected = isStreakProtected(profile)
+  const freezes = profile ? (heldFreezes(profile) ?? 0) : 0
   // notesService already orders by updated_at, so these are the latest saves.
   const recentNotes = notes.slice(0, 4)
 
@@ -121,12 +124,49 @@ export function DashboardPage() {
         description={format(today, 'EEEE, d MMMM')}
         actions={
           streak > 0 ? (
-            <Badge variant="warning" className="px-3 py-1 text-sm">
-              <Flame className="size-4" /> {streak}-day streak
-            </Badge>
+            <div className="flex items-center gap-1.5">
+              <Badge variant="warning" className="px-3 py-1 text-sm">
+                <Flame aria-hidden className="size-4" /> {streak}-day streak
+              </Badge>
+              {freezes > 0 ? (
+                <Badge
+                  variant="secondary"
+                  className="px-2.5 py-1 text-sm"
+                  title={`${freezes} streak freeze${freezes === 1 ? '' : 's'} — each covers one missed day`}
+                >
+                  <Snowflake aria-hidden className="size-4" />
+                  <span className="sr-only">Streak freezes:</span> {freezes}
+                </Badge>
+              ) : null}
+            </div>
           ) : undefined
         }
       />
+
+      {/* A missed day that a freeze is covering — not yet a lost streak */}
+      {streakProtected ? (
+        // Opaque, not tinted: a translucent tint lets the fixed background gradient
+        // show through, and over its lighter end the body text fell to 4.46:1.
+        <Card className="border-primary/40 bg-card" role="status">
+          <CardContent className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+            <div className="bg-primary-strong text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full">
+              <Snowflake aria-hidden className="size-5" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium">A streak freeze is holding your {streak}-day streak</p>
+              <p className="text-muted-foreground text-sm">
+                You missed yesterday. Log a focus session or finish a task today and the freeze
+                keeps your streak going — miss today as well and it resets.
+              </p>
+            </div>
+            <Button asChild size="sm" className="shrink-0">
+              <Link to="/app/focus">
+                <Timer /> Start focusing
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Profile completion notice — surfaces missing required details */}
       {missingProfileFields.length > 0 ? (

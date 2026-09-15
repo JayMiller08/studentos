@@ -14,10 +14,29 @@ function defaultTimezone(): string {
   }
 }
 
+/**
+ * Streak freezes in demo mode.
+ *
+ * Demo profiles live in localStorage, which will store any field, so freezes are
+ * available there — including on demo profiles created before freezes existed.
+ * A real database gets no such default: a row without `streak_freezes` means
+ * migration 00011 hasn't run, and defaulting it would make the next streak write
+ * name a column Postgres doesn't have.
+ */
+function withFreezeDefaults(profile: Profile): Profile {
+  if (isSupabaseConfigured || typeof profile.streak_freezes === 'number') return profile
+  return { ...profile, streak_freezes: 0 }
+}
+
+/** Every profile leaves this service with its optional fields settled. */
+function normalize(profile: Profile): Profile {
+  return withFreezeDefaults(withTourDefaults(profile))
+}
+
 export const profileService = {
   async get(userId: string): Promise<Profile | null> {
     const profile = await profiles().get(userId)
-    return profile ? withTourDefaults(profile) : null
+    return profile ? normalize(profile) : null
   },
 
   /**
@@ -27,7 +46,7 @@ export const profileService = {
    */
   async ensure(user: AuthUser): Promise<Profile> {
     const existing = await profiles().get(user.id)
-    if (existing) return withTourDefaults(existing)
+    if (existing) return normalize(existing)
 
     // First demo sign-in: populate a believable sample workload so every
     // feature demonstrates real behavior instead of empty states.
@@ -36,7 +55,7 @@ export const profileService = {
       ensureDemoSeed(user.id)
     }
 
-    return profiles().upsert({
+    const created = await profiles().upsert({
       id: user.id,
       email: user.email,
       full_name: user.fullName ?? null,
@@ -63,9 +82,10 @@ export const profileService = {
       notification_prefs: DEFAULT_NOTIFICATION_PREFS,
       language: 'en',
     })
+    return normalize(created)
   },
 
   async update(userId: string, patch: Partial<Profile>): Promise<Profile> {
-    return withTourDefaults(await profiles().update(userId, patch))
+    return normalize(await profiles().update(userId, patch))
   },
 }

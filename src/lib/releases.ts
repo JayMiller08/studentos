@@ -29,6 +29,22 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    date: '2026-09-15',
+    title: 'Breaks on autopilot, and a safety net for your streak',
+    changes: [
+      {
+        kind: 'improved',
+        title: 'Pomodoro breaks start themselves',
+        body: 'When a focus session ends, your break now begins straight away, so you never have to come back and press Start just to rest. When the break is over, the next focus session waits until you are ready.',
+      },
+      {
+        kind: 'new',
+        title: 'Streak freezes',
+        body: 'Miss a single day and a streak freeze keeps your streak alive. You earn one for every 7 days in a row and can hold up to 2. A freeze covers one missed day, so missing two in a row still starts your streak again.',
+      },
+    ],
+  },
+  {
     date: '2026-09-09',
     title: 'Write notes without the syntax',
     changes: [

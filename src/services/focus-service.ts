@@ -6,6 +6,7 @@ import {
   parseISO,
   subDays,
 } from 'date-fns'
+import { advanceStreak, type StreakAdvance } from '@/lib/streak'
 import { toDateKey } from '@/lib/utils'
 import { byUser, table } from '@/services/db'
 import { profileService } from '@/services/profile-service'
@@ -87,6 +88,13 @@ export interface LogSessionInput {
   }
 }
 
+/** A logged session, and what logging it did to the daily streak. */
+export interface LoggedSession {
+  session: StudySession
+  /** Null when the streak didn't move: today was already counted, or nothing was studied. */
+  streak: StreakAdvance | null
+}
+
 export const focusService = {
   async listSessions(userId: string): Promise<StudySession[]> {
     return studySessions().list({
@@ -96,7 +104,7 @@ export const focusService = {
   },
 
   /** Persist a finished focus block and roll the user's daily streak forward. */
-  async logSession(userId: string, profile: Profile | null, input: LogSessionInput): Promise<StudySession> {
+  async logSession(userId: string, profile: Profile | null, input: LogSessionInput): Promise<LoggedSession> {
     const session = await studySessions().insert({
       user_id: userId,
       started_at: input.startedAt,
@@ -121,24 +129,21 @@ export const focusService = {
       })
     }
 
-    if (profile && input.minutes > 0) {
-      await focusService.touchDailyStreak(userId, profile)
-    }
+    const streak =
+      profile && input.minutes > 0 ? await focusService.touchDailyStreak(userId, profile) : null
 
-    return session
+    return { session, streak }
   },
 
-  /** Advance the profile-level daily streak (any meaningful activity today). */
-  async touchDailyStreak(userId: string, profile: Profile): Promise<void> {
-    const today = toDateKey(new Date())
-    if (profile.last_active_date === today) return
-
-    const yesterday = toDateKey(subDays(new Date(), 1))
-    const nextStreak = profile.last_active_date === yesterday ? profile.current_streak + 1 : 1
-    await profileService.update(userId, {
-      current_streak: nextStreak,
-      longest_streak: Math.max(profile.longest_streak, nextStreak),
-      last_active_date: today,
-    })
+  /**
+   * Record today's activity against the daily streak — continuing it, spending a
+   * freeze to cover a single missed day, or restarting it. The rules live in
+   * `advanceStreak`; this only persists them. Resolves to what happened, or null
+   * when today was already counted, so callers can tell the student.
+   */
+  async touchDailyStreak(userId: string, profile: Profile): Promise<StreakAdvance | null> {
+    const advance = advanceStreak(profile)
+    if (advance) await profileService.update(userId, advance.patch)
+    return advance
   },
 }

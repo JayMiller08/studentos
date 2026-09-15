@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/app/providers/auth-provider'
+import { announceStreak } from '@/features/gamification/announce-streak'
 import { useAwardXp } from '@/hooks/use-award-xp'
 import { useRealtimeTable } from '@/hooks/use-realtime'
 import { queryKeys } from '@/lib/query-keys'
@@ -22,7 +23,8 @@ export function useLogSession() {
   const awardXp = useAwardXp()
   return useMutation({
     mutationFn: (input: LogSessionInput) => focusService.logSession(user!.id, profile, input),
-    onSuccess: (_data, input) => {
+    onSuccess: (logged, input) => {
+      announceStreak(logged.streak)
       void queryClient.invalidateQueries({ queryKey: queryKeys.studySessions(user!.id) })
       void queryClient.invalidateQueries({ queryKey: queryKeys.pomodoroSessions(user!.id) })
       // Award XP for completed focus phases (not partial skips or breaks).
