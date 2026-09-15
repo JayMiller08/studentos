@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/app/providers/auth-provider'
+import { announceStreak } from '@/features/gamification/announce-streak'
 import { useAwardXp } from '@/hooks/use-award-xp'
 import { useRealtimeTable } from '@/hooks/use-realtime'
 import { queryKeys } from '@/lib/query-keys'
@@ -58,14 +59,21 @@ export function useUpdateTask() {
 }
 
 export function useToggleTask() {
-  const { user, profile } = useAuth()
+  const { user, profile, refreshProfile } = useAuth()
   const queryClient = useQueryClient()
   const awardXp = useAwardXp()
   return useMutation({
     mutationFn: async ({ task, completed }: { task: Task; completed: boolean }) => {
       const updated = await tasksService.setCompleted(task, completed)
       // Completing work counts toward the daily streak.
-      if (completed && profile) await focusService.touchDailyStreak(user!.id, profile)
+      if (completed && profile) {
+        const advance = await focusService.touchDailyStreak(user!.id, profile)
+        announceStreak(advance)
+        // XP isn't awarded for re-ticking a task that was already done, so the
+        // refresh that normally follows it can't be relied on to show a streak
+        // or freeze that just changed.
+        if (advance) void refreshProfile()
+      }
       return updated
     },
     onMutate: async ({ task, completed }) => {

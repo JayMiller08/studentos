@@ -21,7 +21,7 @@ export const DEFAULT_POMODORO_SETTINGS: PomodoroSettings = {
 const SETTINGS_KEY = 'studentos.focus.settings'
 const STATE_KEY = 'studentos.focus.state'
 
-interface PersistedTimerState {
+export interface PersistedTimerState {
   phase: PomodoroPhase
   status: TimerStatus
   /** Epoch ms when the current phase ends (running) . */
@@ -106,15 +106,79 @@ interface UsePomodoroOptions {
 }
 
 /**
+ * How late a finished phase can be noticed and still earn a chime.
+ *
+ * Browsers throttle timers in background tabs to roughly once a minute, so a
+ * phase that ends while the tab is hidden is legitimately noticed up to a
+ * minute late — and that is exactly when the chime is useful. Anything later
+ * means the timer wasn't running at all (the student was on another page), and
+ * a chime on arrival, or two for a focus block and its break, is just noise.
+ */
+const STALE_CHIME_MS = 90_000
+
+/**
+ * The timer state once the running phase has run out.
+ *
+ * A finished focus block rolls straight into its break. The break is part of
+ * the method, and a student who has to come back and press Start in order to
+ * rest usually doesn't. It is timed from when the focus block was *due* to end,
+ * not from when this runs, so someone returning forty minutes later finds that
+ * break already over instead of a fresh one starting on the spot.
+ *
+ * A finished break does not start the next focus block. Rest can begin by
+ * itself; work should be chosen.
+ */
+export function nextStateAfter(
+  prev: PersistedTimerState,
+  settings: PomodoroSettings,
+): PersistedTimerState {
+  const endedAt = prev.endsAt ?? Date.now()
+
+  if (prev.phase === 'focus') {
+    const completedFocusCount = prev.completedFocusCount + 1
+    const breakPhase: PomodoroPhase =
+      completedFocusCount % Math.max(1, settings.longBreakEvery) === 0 ? 'long_break' : 'short_break'
+    return {
+      ...prev,
+      phase: breakPhase,
+      status: 'running',
+      endsAt: endedAt + phaseMinutes(breakPhase, settings) * 60_000,
+      remainingMs: null,
+      startedAtIso: new Date(endedAt).toISOString(),
+      completedFocusCount,
+      distractions: 0,
+    }
+  }
+
+  return {
+    ...prev,
+    phase: 'focus',
+    status: 'idle',
+    endsAt: null,
+    remainingMs: null,
+    startedAtIso: null,
+    distractions: 0,
+  }
+}
+
+/**
  * Pomodoro engine. Wall-clock based (survives tab sleep & reloads via
- * localStorage); emits `onPhaseComplete` exactly once per finished phase so
- * the caller can persist the session.
+ * localStorage); emits `onPhaseComplete` exactly once per finished focus
+ * block so the caller can persist it. Breaks run themselves — see `nextStateAfter`.
  */
 export function usePomodoro({ onPhaseComplete }: UsePomodoroOptions) {
   const [settings, setSettingsState] = React.useState<PomodoroSettings>(loadSettings)
   const [state, setState] = React.useState<PersistedTimerState>(loadState)
   const [now, setNow] = React.useState(() => Date.now())
-  const completeHandledRef = React.useRef(false)
+  /**
+   * The `endsAt` of the phase whose completion has already been handled.
+   *
+   * Keyed on the phase rather than a true/false flag because completions now
+   * chain: a finished focus block starts its break, and that break has to be
+   * able to finish in turn. A flag set when focus ended would still be set when
+   * the break ran out, and the break would never end.
+   */
+  const handledEndsAtRef = React.useRef<number | null>(null)
   const onPhaseCompleteRef = React.useRef(onPhaseComplete)
   onPhaseCompleteRef.current = onPhaseComplete
 
@@ -136,49 +200,34 @@ export function usePomodoro({ onPhaseComplete }: UsePomodoroOptions) {
         ? state.remainingMs
         : totalMs
 
-  // Phase completion.
+  // Phase completion. Completions chain: a finished focus block starts its
+  // break, and a break that has also run out — the student was away — is
+  // completed on the very next pass.
   React.useEffect(() => {
-    if (state.status !== 'running' || remainingMs > 0 || completeHandledRef.current) return
-    completeHandledRef.current = true
+    if (state.status !== 'running' || state.endsAt === null || remainingMs > 0) return
+    if (handledEndsAtRef.current === state.endsAt) return
+    handledEndsAtRef.current = state.endsAt
 
     const finishedPhase = state.phase
+    const endedAt = state.endsAt
     const planned = phaseMinutes(finishedPhase, settings)
-    chime()
+    if (Date.now() - endedAt < STALE_CHIME_MS) chime()
+
     if (finishedPhase === 'focus') {
       onPhaseCompleteRef.current({
         phase: finishedPhase,
         plannedMinutes: planned,
         actualMinutes: planned,
-        startedAtIso: state.startedAtIso ?? new Date(Date.now() - planned * 60_000).toISOString(),
+        startedAtIso: state.startedAtIso ?? new Date(endedAt - planned * 60_000).toISOString(),
         distractions: state.distractions,
         completed: true,
       })
     }
 
-    setState((prev) => {
-      const completedFocusCount =
-        finishedPhase === 'focus' ? prev.completedFocusCount + 1 : prev.completedFocusCount
-      const nextPhase: PomodoroPhase =
-        finishedPhase === 'focus'
-          ? completedFocusCount % Math.max(1, settings.longBreakEvery) === 0
-            ? 'long_break'
-            : 'short_break'
-          : 'focus'
-      return {
-        ...prev,
-        phase: nextPhase,
-        status: 'idle',
-        endsAt: null,
-        remainingMs: null,
-        startedAtIso: null,
-        completedFocusCount,
-        distractions: 0,
-      }
-    })
+    setState((prev) => nextStateAfter(prev, settings))
   }, [remainingMs, state, settings])
 
   const start = React.useCallback(() => {
-    completeHandledRef.current = false
     setNow(Date.now())
     setState((prev) => {
       const duration =
@@ -204,7 +253,6 @@ export function usePomodoro({ onPhaseComplete }: UsePomodoroOptions) {
   }, [])
 
   const reset = React.useCallback(() => {
-    completeHandledRef.current = false
     setState((prev) => ({
       ...INITIAL_STATE,
       phase: prev.phase,
@@ -233,7 +281,6 @@ export function usePomodoro({ onPhaseComplete }: UsePomodoroOptions) {
         }
       }
       const nextPhase: PomodoroPhase = prev.phase === 'focus' ? 'short_break' : 'focus'
-      completeHandledRef.current = false
       return {
         ...prev,
         phase: nextPhase,

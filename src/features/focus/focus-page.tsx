@@ -212,7 +212,7 @@ export function FocusPage() {
           onSuccess: () =>
             toast.success(
               result.completed
-                ? `Pomodoro complete — ${formatMinutes(result.actualMinutes)} focused 🎉`
+                ? `Pomodoro complete — ${formatMinutes(result.actualMinutes)} focused 🎉 Time for a break.`
                 : `Partial focus logged: ${formatMinutes(result.actualMinutes)}`,
             ),
         },

@@ -15,7 +15,7 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { queryKeys } from '@/lib/query-keys'
 import { cn } from '@/lib/utils'
-import { effectiveStreak } from '@/lib/streak'
+import { effectiveStreak, heldFreezes } from '@/lib/streak'
 import { BADGES, gamificationService, levelProgress } from '@/services/gamification-service'
 
 export function AchievementsPage() {
@@ -39,10 +39,19 @@ export function AchievementsPage() {
   const progress = levelProgress(profile?.xp ?? 0)
   const unlockedCount = unlockedIds.size
 
+  const freezeCount = profile ? (heldFreezes(profile) ?? 0) : 0
+
   const heroStats = [
     { icon: Star, label: 'Level', value: String(progress.level) },
     { icon: Zap, label: 'Total XP', value: (profile?.xp ?? 0).toLocaleString() },
-    { icon: Flame, label: 'Day streak', value: String(effectiveStreak(profile)) },
+    {
+      icon: Flame,
+      label:
+        freezeCount > 0
+          ? `Day streak · ${freezeCount} freeze${freezeCount === 1 ? '' : 's'}`
+          : 'Day streak',
+      value: String(effectiveStreak(profile)),
+    },
     { icon: Trophy, label: 'Badges', value: `${unlockedCount}/${BADGES.length}` },
   ]
 

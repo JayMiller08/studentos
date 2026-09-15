@@ -78,7 +78,7 @@ Choosing an implementation happens in exactly one place per concern (e.g.
   transparent, explainable factor blend; stress level shifts the weighting.
 - **`study-planner.ts`** — earliest-deadline-first scheduling into
   capacity-limited 25–90-minute focus blocks; never schedules past a deadline.
-- **`focus-service.ts`** — study-time buckets and streak computation.
+- **`focus-service.ts`** — study-time buckets, and persisting the daily streak. The streak rules themselves (continue, cover a single missed day with a freeze, or restart) are pure functions in `lib/streak.ts`.
 - **`gamification-service.ts`** — XP → level curve and badge conditions.
 - **`budget-service.ts` / `habits-service.ts`** — summaries, projections, streaks.
 

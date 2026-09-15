@@ -62,6 +62,12 @@ export interface Profile extends BaseRow {
   current_streak: number
   longest_streak: number
   last_active_date: string | null
+  /**
+   * Streak freezes held (0–2). Optional because the column exists only where
+   * migration 00011 ran; `heldFreezes` reads its absence as "freezes off", so
+   * nothing ever writes it to a database that would reject it.
+   */
+  streak_freezes?: number
   onboarding_completed: boolean
   /**
    * @deprecated Superseded by `tours_seen`; read only to migrate legacy rows.
