@@ -600,7 +600,7 @@ function VersionHistory({
               {formatDistanceToNow(parseISO(version.created_at), { addSuffix: true })}
             </p>
             <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
-              {version.content_md.replace(/[#*_>`]/g, '').trim() || 'Empty'}
+              {notePreview(version) || 'Empty'}
             </p>
             <Button variant="outline" size="sm" className="mt-2 h-7 text-xs" onClick={() => onRestore(version)}>
               Restore this version

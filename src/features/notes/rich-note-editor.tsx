@@ -25,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Separator } from '@/components/ui/separator'
 import { getMarkdown, NOTE_EDITOR_EXTENSIONS } from '@/features/notes/editor-extensions'
 import { cn } from '@/lib/utils'
+import './rich-note-editor.css'
 
 const BUTTON_CLASS =
   'text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/60 inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40'
@@ -306,7 +307,7 @@ export function RichNoteEditor({ value, onChange, placeholder }: RichNoteEditorP
       attributes: {
         'aria-label': 'Note content',
         class:
-          'prose prose-sm dark:prose-invert max-w-none px-1 py-2 focus:outline-none [&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0 [&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:items-start [&_ul[data-type=taskList]_li]:gap-2 [&_p.is-editor-empty:first-child::before]:text-muted-foreground [&_p.is-editor-empty:first-child::before]:pointer-events-none [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]',
+          'note-editor prose prose-sm dark:prose-invert max-w-none px-1 py-2 focus:outline-none [&_p.is-editor-empty:first-child::before]:text-muted-foreground [&_p.is-editor-empty:first-child::before]:pointer-events-none [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]',
       },
     },
     onUpdate: ({ editor: instance }) => {

@@ -1,0 +1,120 @@
+/*
+ * Checklists in the note editor.
+ *
+ * TipTap builds this markup itself — li[data-checked] > label > input for the
+ * box, li > div > p for the text — so there is nothing to put utility classes
+ * on, and these rules are scoped to the editor surface instead. Every colour is
+ * a design token, so both themes follow without a separate dark block.
+ *
+ * Imported by rich-note-editor.tsx, so it ships in the lazily loaded notes
+ * chunk rather than in every page's stylesheet.
+ */
+
+.note-editor ul[data-type='taskList'] {
+  list-style: none;
+  padding-inline-start: 0;
+  margin-block: 0.75rem;
+}
+
+/* Sub-tasks sit close under the item they belong to. */
+.note-editor ul[data-type='taskList'] ul[data-type='taskList'] {
+  margin-block: 0.25rem 0;
+}
+
+.note-editor ul[data-type='taskList'] > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  margin-block: 0.25rem;
+  padding: 0;
+}
+
+/*
+ * Exactly one line tall, so the box centres on the item's first line of text
+ * however far that text wraps. 1.5rem is the same height for browsers that
+ * predate the lh unit.
+ */
+.note-editor ul[data-type='taskList'] > li > label {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 1.5rem;
+  height: 1lh;
+  cursor: pointer;
+  user-select: none;
+}
+
+.note-editor ul[data-type='taskList'] > li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+/*
+ * A done item is struck through. The line is always drawn, just transparent
+ * until the item is ticked, so it fades in rather than snapping on — and being
+ * a text decoration, it follows every line the item wraps onto. Only the item's
+ * own paragraph is targeted, so ticking a task never strikes its sub-tasks.
+ */
+.note-editor ul[data-type='taskList'] > li > div > p {
+  margin: 0;
+  text-decoration-line: line-through;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 0.09em;
+  transition:
+    color 200ms ease,
+    text-decoration-color 200ms ease;
+}
+
+.note-editor ul[data-type='taskList'] > li[data-checked='true'] > div > p {
+  color: var(--muted-foreground);
+  text-decoration-color: var(--muted-foreground);
+}
+
+/* Prose gives bold, code and links colours of their own; a done item mutes them all. */
+.note-editor ul[data-type='taskList'] > li[data-checked='true'] > div > p :where(strong, em, code, a) {
+  color: inherit;
+}
+
+/*
+ * The box: the same 20px, 6px-radius shape as the app's Checkbox component.
+ * The border is 90% of the muted token because at 75% it measured 2.97:1
+ * against the card in light mode, under the 3:1 a control's outline needs.
+ */
+.note-editor ul[data-type='taskList'] input[type='checkbox'] {
+  appearance: none;
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  border: 1.5px solid var(--note-check-border, color-mix(in oklab, var(--muted-foreground) 90%, transparent));
+  border-radius: 6px;
+  background: transparent center / 0.875rem no-repeat;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 100ms ease;
+}
+
+.note-editor ul[data-type='taskList'] input[type='checkbox']:hover {
+  border-color: var(--primary);
+}
+
+.note-editor ul[data-type='taskList'] input[type='checkbox']:active {
+  transform: scale(0.9);
+}
+
+.note-editor ul[data-type='taskList'] input[type='checkbox']:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--card),
+    0 0 0 4px color-mix(in oklab, var(--ring) 60%, transparent);
+}
+
+.note-editor ul[data-type='taskList'] input[type='checkbox']:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  /* Lucide's check, in the near-white both themes use for primary-foreground. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}
