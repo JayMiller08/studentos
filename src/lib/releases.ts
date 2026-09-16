@@ -29,6 +29,22 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    date: '2026-09-16',
+    title: 'Cleaner checklists and colourful code',
+    changes: [
+      {
+        kind: 'improved',
+        title: 'Checklists that look finished',
+        body: 'Checklist boxes are neater and line up with your text, and ticking an item now strikes it through, so you can see at a glance what is done.',
+      },
+      {
+        kind: 'new',
+        title: 'Code blocks with colour and line numbers',
+        body: 'Type three backticks (```) or press the Code block button and a code block appears straight away. Code is coloured as you type, every line is numbered, and you can set the language from the label in the corner.',
+      },
+    ],
+  },
+  {
     date: '2026-09-15',
     title: 'Breaks on autopilot, and a safety net for your streak',
     changes: [

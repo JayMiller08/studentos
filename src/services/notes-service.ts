@@ -96,7 +96,7 @@ export const notesService = {
  * A plain-text snippet of a note's body, for cards and lists.
  *
  * Notes are stored as Markdown, so this strips the syntax a reader shouldn't
- * see: checklist boxes and bullets (a checklist used to preview as
+ * see: code fences, checklist boxes and bullets (a checklist used to preview as
  * "- x Submit lab report"), formatting characters, and the backslashes the
  * editor adds to keep a literal character literal — `A\*` used to preview as a
  * stray "A\".
@@ -106,6 +106,8 @@ export function notePreview(note: Pick<Note, 'content_md'>): string {
   // scanner misreads a backtick beside a bracket inside a character class.
   return (
     note.content_md
+      // Code fences: the backtick lines and their language tag are not content.
+      .replace(/^[ \t]*\x60{3,}[^\n]*$/gm, '')
       // Bullets and checklist boxes are structure, not content.
       .replace(/^[ \t]*[-*+][ \t]+(?:\x5B[ xX]\x5D[ \t]+)?/gm, '')
       // Formatting syntax, unless escaped — then it is a literal character.

@@ -15,6 +15,7 @@ import {
   ListOrdered,
   Quote,
   Redo2,
+  SquareCode,
   Strikethrough,
   Undo2,
 } from 'lucide-react'
@@ -146,6 +147,7 @@ function Toolbar({ editor }: { editor: Editor }) {
       italic: e.isActive('italic'),
       strike: e.isActive('strike'),
       code: e.isActive('code'),
+      codeBlock: e.isActive('codeBlock'),
       h1: e.isActive('heading', { level: 1 }),
       h2: e.isActive('heading', { level: 2 }),
       h3: e.isActive('heading', { level: 3 }),
@@ -207,7 +209,8 @@ function Toolbar({ editor }: { editor: Editor }) {
         onClick={() => editor.chain().focus().toggleStrike().run()}
       />
       <ToolbarButton
-        label="Code"
+        label="Inline code"
+        shortcut="Ctrl+E"
         icon={Code}
         active={state.code}
         onClick={() => editor.chain().focus().toggleCode().run()}
@@ -238,6 +241,13 @@ function Toolbar({ editor }: { editor: Editor }) {
         icon={Quote}
         active={state.quote}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
+      />
+      <ToolbarButton
+        label="Code block"
+        shortcut="```"
+        icon={SquareCode}
+        active={state.codeBlock}
+        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
       />
 
       <Separator orientation="vertical" className="mx-1 !h-5" />

@@ -4,6 +4,7 @@ import { TaskItem, TaskList } from '@tiptap/extension-list'
 import { TableKit } from '@tiptap/extension-table'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from 'tiptap-markdown'
+import { NoteCodeBlock } from '@/features/notes/note-code-block'
 
 /**
  * The note editor's schema.
@@ -25,12 +26,16 @@ export const NOTE_EDITOR_EXTENSIONS = [
     // then be silently dropped on save. Strikethrough covers the same intent
     // and does round-trip.
     underline: false,
+    // Replaced by NoteCodeBlock below: the same node, with highlighting, line
+    // numbers and a language picker.
+    codeBlock: false,
     link: {
       openOnClick: false,
       autolink: true,
       HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' },
     },
   }),
+  NoteCodeBlock,
   TaskList,
   TaskItem.configure({ nested: true }),
   // Without this, markdown-it parses `![alt](url)` but the schema has no node to

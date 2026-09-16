@@ -37,4 +37,10 @@ describe('notePreview', () => {
   it('leaves a hyphen that is not a bullet alone', () => {
     expect(preview('A well-known result - not a list')).toBe('A well-known result - not a list')
   })
+
+  it('drops code fences and their language tag', () => {
+    // Regression: a Java block previewed as "java public class Box {}".
+    const fence = String.fromCharCode(96).repeat(3)
+    expect(preview(fence + 'java' + NL + 'public class Box {}' + NL + fence)).toBe('public class Box {}')
+  })
 })

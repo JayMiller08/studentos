@@ -37,6 +37,8 @@ const CONSTRUCTS: Array<[string, string]> = [
   ['task list', '- [ ] todo' + NL + NL + '- [x] done'],
   ['blockquote', '> A quoted line.'],
   ['fenced code', '```js' + NL + 'const x = 1' + NL + '```'],
+  ['java code block', '```java' + NL + 'public class Box {' + NL + '    private Object value;' + NL + '}' + NL + '```'],
+  ['code block with no language', '```' + NL + 'plain text' + NL + '```'],
   ['link', 'See [the docs](https://example.com) for more.'],
   ['horizontal rule', 'above' + NL + NL + '---' + NL + NL + 'below'],
   ['table', '| a | b |' + NL + '| --- | --- |' + NL + '| 1 | 2 |'],
@@ -78,6 +80,22 @@ describe('the details a student would notice going missing', () => {
 
   it('keeps the language of a code block', () => {
     expect(toMarkdown('```python' + NL + 'x = 1' + NL + '```')).toContain('```python')
+  })
+
+  it('keeps indentation and blank lines inside code, exactly', () => {
+    // The gutter and language picker are drawn around the block; none of it
+    // may leak into what is saved.
+    const java =
+      '```java' + NL +
+      'public class Box {' + NL +
+      '    private Object value;' + NL +
+      NL +
+      '    public Object get() {' + NL +
+      '        return value;' + NL +
+      '    }' + NL +
+      '}' + NL +
+      '```'
+    expect(toMarkdown(java)).toBe(java)
   })
 
   it('keeps nesting depth in lists', () => {
