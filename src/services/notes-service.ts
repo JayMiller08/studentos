@@ -105,7 +105,7 @@ export function notePreview(note: Pick<Note, 'content_md'>): string {
   // \x5C \x60 \x5B \x5D are \ ` [ ]. Spelled as escapes because TypeScript's
   // scanner misreads a backtick beside a bracket inside a character class.
   return (
-    note.content_md
+    withoutImageAddresses(note.content_md)
       // Code fences: the backtick lines and their language tag are not content.
       .replace(/^[ \t]*\x60{3,}[^\n]*$/gm, '')
       // Bullets and checklist boxes are structure, not content.
@@ -119,6 +119,15 @@ export function notePreview(note: Pick<Note, 'content_md'>): string {
   )
 }
 
+/**
+ * A note's Markdown with each image reduced to its alt text. An image's address
+ * — `note-image:3f1c….png` for a pasted one — is not something a student wrote,
+ * and left in, searching "note" would match every note with a pasted image.
+ */
+function withoutImageAddresses(markdown: string): string {
+  return markdown.replace(/!\x5B([^\x5D\n]*)\x5D\([^)\n]*\)/g, '$1')
+}
+
 /** Case-insensitive search across title, content and tags. */
 export function searchNotes(noteList: Note[], query: string): Note[] {
   const trimmed = query.trim().toLowerCase()
@@ -126,7 +135,7 @@ export function searchNotes(noteList: Note[], query: string): Note[] {
   return noteList.filter(
     (note) =>
       note.title.toLowerCase().includes(trimmed) ||
-      note.content_md.toLowerCase().includes(trimmed) ||
+      withoutImageAddresses(note.content_md).toLowerCase().includes(trimmed) ||
       note.tags.some((tag) => tag.toLowerCase().includes(trimmed)),
   )
 }

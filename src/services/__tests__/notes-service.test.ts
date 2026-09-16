@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { notePreview } from '@/services/notes-service'
+import { notePreview, searchNotes } from '@/services/notes-service'
+import type { Note } from '@/types/models'
 
 const NL = String.fromCharCode(10)
 /** A literal backslash, spelled out so no escape layer can mangle it. */
 const BS = String.fromCharCode(92)
+/** How a note refers to an image pasted into it. */
+const PASTED = 'note-image:1b4e28ba-2fa1-41d2-883f-0016d3cca427.png'
 
 const preview = (content_md: string) => notePreview({ content_md })
 
@@ -42,5 +45,28 @@ describe('notePreview', () => {
     // Regression: a Java block previewed as "java public class Box {}".
     const fence = String.fromCharCode(96).repeat(3)
     expect(preview(fence + 'java' + NL + 'public class Box {}' + NL + fence)).toBe('public class Box {}')
+  })
+
+  it("shows an image's description, never its address", () => {
+    expect(preview('Cell diagram:' + NL + NL + '![Plant cell](' + PASTED + ')' + NL + NL + 'Label it.')).toBe(
+      'Cell diagram: Plant cell Label it.',
+    )
+    expect(preview('![](' + PASTED + ')' + NL + NL + 'Caption')).toBe('Caption')
+  })
+})
+
+describe('searchNotes', () => {
+  const noteWith = (content_md: string) =>
+    ({ id: 'n1', title: 'Biology', content_md, tags: [] }) as unknown as Note
+
+  it("does not match the address of an image the student pasted", () => {
+    const notes = [noteWith('![](' + PASTED + ')')]
+    expect(searchNotes(notes, 'note')).toEqual([])
+    expect(searchNotes(notes, 'png')).toEqual([])
+  })
+
+  it("still finds a note by an image's description", () => {
+    const notes = [noteWith('![Plant cell](' + PASTED + ')')]
+    expect(searchNotes(notes, 'plant cell')).toEqual(notes)
   })
 })

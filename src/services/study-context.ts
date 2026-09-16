@@ -61,6 +61,8 @@ function dueLabel(iso: string, now: Date): string {
 /** Collapse markdown/whitespace into a single-line excerpt. */
 function excerpt(markdown: string, max: number): string {
   const flat = markdown
+    // An image's alt text says what it shows; its address means nothing to the coach.
+    .replace(/!\[([^\]\n]*)\]\([^)\n]*\)/g, ' $1 ')
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/[#*_>`\-|]/g, ' ')
     .replace(/\s+/g, ' ')

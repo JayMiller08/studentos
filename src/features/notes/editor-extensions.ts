@@ -1,10 +1,10 @@
 import type { Editor } from '@tiptap/core'
-import { Image } from '@tiptap/extension-image'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
 import { TableKit } from '@tiptap/extension-table'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from 'tiptap-markdown'
 import { NoteCodeBlock } from '@/features/notes/note-code-block'
+import { NoteImage } from '@/features/notes/note-image'
 
 /**
  * The note editor's schema.
@@ -38,10 +38,11 @@ export const NOTE_EDITOR_EXTENSIONS = [
   NoteCodeBlock,
   TaskList,
   TaskItem.configure({ nested: true }),
-  // Without this, markdown-it parses `![alt](url)` but the schema has no node to
-  // put it in, so the image is dropped and the note comes back missing it. Any
-  // construct the parser understands must have a home in the schema.
-  Image,
+  // Without an image node, markdown-it parses `![alt](url)` but the schema has
+  // nowhere to put it, so the image is dropped and the note comes back missing
+  // it. Any construct the parser understands must have a home in the schema.
+  // NoteImage is that node, plus pasting and dropping images in.
+  NoteImage,
   TableKit.configure({ table: { resizable: false } }),
   Markdown.configure({
     html: false,

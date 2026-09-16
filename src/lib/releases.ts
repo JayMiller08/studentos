@@ -30,8 +30,13 @@ export interface Release {
 export const RELEASES: Release[] = [
   {
     date: '2026-09-16',
-    title: 'Cleaner checklists and colourful code',
+    title: 'Images in notes, colourful code and cleaner checklists',
     changes: [
+      {
+        kind: 'new',
+        title: 'Paste images into your notes',
+        body: 'Paste a screenshot or a copied image straight into a note, or drag one in, and it is saved with the note. Big images are resized so your notes stay quick to open, and your images are private to you.',
+      },
       {
         kind: 'improved',
         title: 'Checklists that look finished',
@@ -40,7 +45,7 @@ export const RELEASES: Release[] = [
       {
         kind: 'new',
         title: 'Code blocks with colour and line numbers',
-        body: 'Type three backticks (```) or press the Code block button and a code block appears straight away. Code is coloured as you type, every line is numbered, and you can set the language from the label in the corner.',
+        body: 'Type three backticks (```) or press the Code block button and a code block appears straight away. Code is coloured as you type and every line is numbered. The language is recognised for you — the label in the corner shows what it found, and you can change it there.',
       },
     ],
   },
