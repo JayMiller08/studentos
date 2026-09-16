@@ -336,3 +336,143 @@
 .note-editor :not(pre) > code::after {
   content: none;
 }
+
+/* ── Images ──────────────────────────────────────────────────────────────── */
+
+/*
+ * An image in a note (note-image.ts). The frame hugs the picture, so selecting
+ * it outlines the image rather than the width of the page. A tall screenshot
+ * is capped in height and keeps its proportions.
+ */
+.note-editor .note-image {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 1rem 0;
+}
+
+.note-editor .note-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 32rem;
+  width: auto;
+  height: auto;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  transition: opacity 150ms ease;
+}
+
+/* ProseMirror's own selected-node outline is a fixed light blue; use the theme's ring. */
+.note-editor .note-image.ProseMirror-selectednode {
+  outline: none;
+}
+
+.note-editor .note-image.ProseMirror-selectednode img {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* While its URL is looked up and the file loads: a quiet block where the image will be. */
+.note-editor .note-image[data-state='loading'] {
+  min-width: min(100%, 16rem);
+  min-height: 8rem;
+  border-radius: 0.5rem;
+  background: var(--muted);
+  animation: note-image-pulse 1.6s ease-in-out infinite;
+}
+
+.note-editor .note-image[data-state='loading'] img {
+  opacity: 0;
+}
+
+.note-editor .note-image[data-state='error'] img {
+  display: none;
+}
+
+.note-editor .note-image__fallback {
+  display: none;
+}
+
+.note-editor .note-image[data-state='error'] .note-image__fallback {
+  display: block;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+/*
+ * An image still uploading: the local preview, dimmed, with a status chip over
+ * it. It is a decoration, never part of the note, until the upload finishes.
+ */
+.note-editor .note-image-upload {
+  position: relative;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-width: 100%;
+  margin: 0.25rem 0;
+  vertical-align: top;
+}
+
+.note-editor .note-image-upload img {
+  display: block;
+  max-width: 100%;
+  max-height: 12rem;
+  margin: 0;
+  border-radius: 0.5rem;
+  opacity: 0.5;
+}
+
+.note-editor .note-image-upload__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.note-editor .note-image-upload img ~ .note-image-upload__label {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+}
+
+.note-editor .note-image-upload__label::before {
+  content: '';
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid color-mix(in oklab, var(--muted-foreground) 35%, transparent);
+  border-top-color: var(--foreground);
+  border-radius: 9999px;
+  animation: note-image-spin 0.8s linear infinite;
+}
+
+@keyframes note-image-pulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes note-image-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-editor .note-image[data-state='loading'],
+  .note-editor .note-image-upload__label::before {
+    animation: none;
+  }
+}

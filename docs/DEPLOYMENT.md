@@ -35,6 +35,8 @@ Migrations create:
 - `00003_rls_policies.sql` — Row Level Security on every table.
 - `00004_storage.sql` — `avatars` (public read) and `attachments` (private)
   buckets with owner-scoped policies.
+- `00012_note_images.sql` — the private `note-images` bucket for images pasted
+  into notes (PNG, JPEG, WebP and GIF, up to 5 MB each).
 
 ### Promote an admin
 

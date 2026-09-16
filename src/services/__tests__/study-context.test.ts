@@ -234,6 +234,22 @@ describe('buildStudyContext', () => {
     expect(line).not.toContain('const x = 1')
   })
 
+  it("gives the coach an image's description, not its address", () => {
+    const context = build({
+      notes: [
+        note({
+          id: 'n1',
+          title: 'Cells',
+          content_md: '![Plant cell diagram](note-image:1b4e28ba-2fa1-41d2-883f-0016d3cca427.png)\n\nLabel the parts.',
+        }),
+      ],
+    })
+    const line = context.split('\n').find((l) => l.includes('"Cells"')) ?? ''
+    expect(line).toContain('Plant cell diagram')
+    expect(line).toContain('Label the parts.')
+    expect(line).not.toContain('note-image:')
+  })
+
   it('puts pinned notes first', () => {
     const context = build({
       notes: [

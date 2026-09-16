@@ -76,9 +76,13 @@ only, and a request can always be replayed by hand.
 
 ## Storage
 
-Two buckets with owner-scoped policies keyed on the path's first segment
-(`{user_id}/…`): `avatars` (public read, owner write) and `attachments`
-(fully private).
+Three buckets with owner-scoped policies keyed on the path's first segment
+(`{user_id}/…`): `avatars` (public read, owner write), `attachments` (fully
+private) and `note-images` (fully private). `note-images` holds images pasted
+into notes; the bucket itself accepts only PNG, JPEG, WebP and GIF up to 5 MB, so
+SVG and HTML are refused whatever a client sends. Its files are shown through
+signed URLs that expire after an hour, and a note stores a `note-image:`
+reference rather than any URL.
 
 ## AI safety
 

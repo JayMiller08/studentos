@@ -43,6 +43,7 @@ const CONSTRUCTS: Array<[string, string]> = [
   ['horizontal rule', 'above' + NL + NL + '---' + NL + NL + 'below'],
   ['table', '| a | b |' + NL + '| --- | --- |' + NL + '| 1 | 2 |'],
   ['image', '![alt text](https://example.com/i.png)'],
+  ['pasted image', '![](note-image:1b4e28ba-2fa1-41d2-883f-0016d3cca427.png)'],
   ['unicode', 'Solve det(A - lambda I) = 0.'],
 ]
 
@@ -65,6 +66,12 @@ describe('the details a student would notice going missing', () => {
     expect(toMarkdown('![diagram](https://example.com/graph.png)')).toContain(
       'https://example.com/graph.png',
     )
+  })
+
+  it('keeps the reference to a pasted image exactly', () => {
+    // A mangled reference — escaped, encoded, dropped — is an image that never loads again.
+    const pasted = '![Plant cell](note-image:1b4e28ba-2fa1-41d2-883f-0016d3cca427.png)'
+    expect(toMarkdown(pasted)).toBe(pasted)
   })
 
   it('keeps every cell of a table', () => {

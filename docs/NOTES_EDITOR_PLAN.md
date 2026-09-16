@@ -149,6 +149,7 @@ Every one of these currently tells students the editor is Markdown:
 
 Real-time collaboration, comments, image uploads into notes, export to PDF/Word,
 and AI writing assistance inside the editor. Each is a project of its own.
+(Image uploads have since shipped — see *Later: pasted images* below.)
 
 ## Already shipped
 
@@ -206,3 +207,48 @@ pays nothing.
 Both are fixed. `/app/notes` now reports zero critical and zero serious axe
 violations with the editor and history panel open; one moderate `heading-order`
 remains, pre-existing, from note cards using `<h3>`.
+
+---
+
+# Later: pasted images
+
+Paste an image (a screenshot, an image copied from anywhere) or drop one into a
+note, and it is stored and added where the cursor was. `note-image.ts` is the
+editor side; `note-images-service.ts` does the storing.
+
+**The note stays Markdown.** A pasted image is `![alt](note-image:<uuid>.<ext>)`.
+That `src` is a reference, not a URL: the files are private, private URLs
+expire, and a note has to open next month. The image node view turns the
+reference into a URL when the note is shown. Images linked from the web show as
+they always did.
+
+**Storage.** Supabase keeps the files in the private `note-images` bucket
+(migration `00012`), under `{user_id}/`, with the same owner-only policies as
+`attachments`. The bucket itself only accepts PNG, JPEG, WebP and GIF up to 5 MB,
+so an SVG (which can carry script) never gets in whatever a client sends. The
+editor shows files through signed URLs that last an hour. Local demo mode has no
+storage server and keeps its database in localStorage, which a few screenshots
+would fill, so demo images go to IndexedDB.
+
+**Before upload**, anything over 1.5 MB, wider or taller than 2400 px, or in a
+format storage doesn't take is scaled down and re-encoded as WebP (JPEG where a
+browser can't write WebP). GIFs are stored as they are, because re-encoding
+would stop the animation.
+
+**While it uploads**, a placeholder shows the local preview. It is a
+decoration, not content, so autosave never writes a half-finished image into
+the note or its version history. If the text around it is deleted before the
+upload finishes, the image is not added.
+
+**A paste with text in it is text.** Word, Excel and PowerPoint put a picture of
+the copied selection on the clipboard beside the words; uploading that picture
+instead of pasting the words would be wrong every time.
+
+**Files are never deleted** when an image is taken out of a note, because
+restoring an earlier version brings the image back. Deleting a note leaves its
+images behind too; a cleanup job for files no note or version refers to is the
+obvious follow-up if storage use ever matters.
+
+Previews, search and the coach's note excerpts all read an image as its alt
+text, so `note-image:` addresses never show up in a preview, match a search, or
+reach the model.
