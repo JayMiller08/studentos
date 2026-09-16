@@ -15,6 +15,7 @@ import {
   ListOrdered,
   Quote,
   Redo2,
+  SquareCode,
   Strikethrough,
   Undo2,
 } from 'lucide-react'
@@ -25,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Separator } from '@/components/ui/separator'
 import { getMarkdown, NOTE_EDITOR_EXTENSIONS } from '@/features/notes/editor-extensions'
 import { cn } from '@/lib/utils'
+import './rich-note-editor.css'
 
 const BUTTON_CLASS =
   'text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/60 inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40'
@@ -145,6 +147,7 @@ function Toolbar({ editor }: { editor: Editor }) {
       italic: e.isActive('italic'),
       strike: e.isActive('strike'),
       code: e.isActive('code'),
+      codeBlock: e.isActive('codeBlock'),
       h1: e.isActive('heading', { level: 1 }),
       h2: e.isActive('heading', { level: 2 }),
       h3: e.isActive('heading', { level: 3 }),
@@ -206,7 +209,8 @@ function Toolbar({ editor }: { editor: Editor }) {
         onClick={() => editor.chain().focus().toggleStrike().run()}
       />
       <ToolbarButton
-        label="Code"
+        label="Inline code"
+        shortcut="Ctrl+E"
         icon={Code}
         active={state.code}
         onClick={() => editor.chain().focus().toggleCode().run()}
@@ -237,6 +241,13 @@ function Toolbar({ editor }: { editor: Editor }) {
         icon={Quote}
         active={state.quote}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
+      />
+      <ToolbarButton
+        label="Code block"
+        shortcut="```"
+        icon={SquareCode}
+        active={state.codeBlock}
+        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
       />
 
       <Separator orientation="vertical" className="mx-1 !h-5" />
@@ -306,7 +317,7 @@ export function RichNoteEditor({ value, onChange, placeholder }: RichNoteEditorP
       attributes: {
         'aria-label': 'Note content',
         class:
-          'prose prose-sm dark:prose-invert max-w-none px-1 py-2 focus:outline-none [&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0 [&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:items-start [&_ul[data-type=taskList]_li]:gap-2 [&_p.is-editor-empty:first-child::before]:text-muted-foreground [&_p.is-editor-empty:first-child::before]:pointer-events-none [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]',
+          'note-editor prose prose-sm dark:prose-invert max-w-none px-1 py-2 focus:outline-none [&_p.is-editor-empty:first-child::before]:text-muted-foreground [&_p.is-editor-empty:first-child::before]:pointer-events-none [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]',
       },
     },
     onUpdate: ({ editor: instance }) => {

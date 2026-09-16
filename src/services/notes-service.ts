@@ -95,15 +95,28 @@ export const notesService = {
 /**
  * A plain-text snippet of a note's body, for cards and lists.
  *
- * Shared rather than inlined per caller: the markup a note is written in is
- * about to change, and every preview should stop stripping hashes on the same
- * day the editor stops producing them.
+ * Notes are stored as Markdown, so this strips the syntax a reader shouldn't
+ * see: code fences, checklist boxes and bullets (a checklist used to preview as
+ * "- x Submit lab report"), formatting characters, and the backslashes the
+ * editor adds to keep a literal character literal — `A\*` used to preview as a
+ * stray "A\".
  */
 export function notePreview(note: Pick<Note, 'content_md'>): string {
-  return note.content_md
-    .replace(/[#*_>`[\]]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+  // \x5C \x60 \x5B \x5D are \ ` [ ]. Spelled as escapes because TypeScript's
+  // scanner misreads a backtick beside a bracket inside a character class.
+  return (
+    note.content_md
+      // Code fences: the backtick lines and their language tag are not content.
+      .replace(/^[ \t]*\x60{3,}[^\n]*$/gm, '')
+      // Bullets and checklist boxes are structure, not content.
+      .replace(/^[ \t]*[-*+][ \t]+(?:\x5B[ xX]\x5D[ \t]+)?/gm, '')
+      // Formatting syntax, unless escaped — then it is a literal character.
+      .replace(/(?<!\x5C)[#*_>\x60\x5B\x5D]/g, '')
+      // Then the escapes themselves.
+      .replace(/\x5C([\x5C\x60*_{}\x5B\x5D()#+\x2D.!>|~])/g, '$1')
+      .replace(/\s+/g, ' ')
+      .trim()
+  )
 }
 
 /** Case-insensitive search across title, content and tags. */
