@@ -40,7 +40,7 @@ export const RELEASES: Release[] = [
       {
         kind: 'new',
         title: 'Code blocks with colour and line numbers',
-        body: 'Type three backticks (```) or press the Code block button and a code block appears straight away. Code is coloured as you type, every line is numbered, and you can set the language from the label in the corner.',
+        body: 'Type three backticks (```) or press the Code block button and a code block appears straight away. Code is coloured as you type and every line is numbered. The language is recognised for you — the label in the corner shows what it found, and you can change it there.',
       },
     ],
   },

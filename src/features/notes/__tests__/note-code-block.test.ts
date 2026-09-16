@@ -2,7 +2,8 @@
 import { Editor } from '@tiptap/core'
 import { afterEach, describe, expect, it } from 'vitest'
 import { getMarkdown, NOTE_EDITOR_EXTENSIONS } from '../editor-extensions'
-import { lineNumbers, pickerValueFor } from '../note-code-block'
+import { pickerValueFor } from '../code-languages'
+import { lineNumbers } from '../note-code-block'
 
 const NL = String.fromCharCode(10)
 /** Three backticks, spelled out so no escape layer can mangle them. */
@@ -126,6 +127,29 @@ describe('the language picker', () => {
     expect(getMarkdown(ed).startsWith(FENCE + 'python')).toBe(true)
   })
 
+  it('names the language it detected when none is chosen', () => {
+    mount(FENCE + NL + 'public class Box {' + NL + '    private Object value;' + NL + '}' + NL + FENCE)
+    expect(picker().value).toBe('')
+    expect(picker().selectedOptions[0]?.textContent).toBe('Java (auto)')
+  })
+
+  it('claims no language for text it cannot place', () => {
+    mount(FENCE + NL + 'Remember to revise chapter 4 before the test on Friday.' + NL + FENCE)
+    expect(picker().selectedOptions[0]?.textContent).toBe('Auto-detect')
+  })
+
+  it('follows the code as it is typed', () => {
+    const ed = mount(FENCE + NL + 'x' + NL + FENCE)
+    expect(picker().selectedOptions[0]?.textContent).toBe('Auto-detect')
+    ed.view.dispatch(ed.state.tr.insertText('System.out.println("hi");', 1, 2))
+    expect(picker().selectedOptions[0]?.textContent).toBe('Java (auto)')
+  })
+
+  it('stops naming a detection once a language is chosen', () => {
+    mount(FENCE + 'python' + NL + 'public class Box {}' + NL + FENCE)
+    expect(picker().options[0]?.textContent).toBe('Auto-detect')
+  })
+
   it('maps known names and aliases, and nothing else', () => {
     expect(pickerValueFor(null)).toBe('')
     expect(pickerValueFor('JS')).toBe('javascript')
@@ -146,5 +170,10 @@ describe('highlighting', () => {
   it('detects the language when none is chosen', () => {
     mount(FENCE + NL + 'def greet(name):' + NL + '    return name' + NL + FENCE)
     expect(keywords()).toEqual(expect.arrayContaining(['def', 'return']))
+  })
+
+  it('leaves text it cannot place uncoloured', () => {
+    mount(FENCE + NL + 'Remember to revise chapter 4 before the test on Friday.' + NL + FENCE)
+    expect(codeBlock().querySelector('[class*="hljs-"]')).toBeNull()
   })
 })
