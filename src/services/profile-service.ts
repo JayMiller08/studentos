@@ -1,4 +1,5 @@
 import { isSupabaseConfigured } from '@/lib/env'
+import { STARTING_STREAK_FREEZES } from '@/lib/streak'
 import { withTourDefaults } from '@/lib/tours'
 import { table } from '@/services/db'
 import type { AuthUser } from '@/services/auth-service'
@@ -21,11 +22,12 @@ function defaultTimezone(): string {
  * available there — including on demo profiles created before freezes existed.
  * A real database gets no such default: a row without `streak_freezes` means
  * migration 00011 hasn't run, and defaulting it would make the next streak write
- * name a column Postgres doesn't have.
+ * name a column Postgres doesn't have. Where the column does exist, the starting
+ * freeze comes from its default instead (migration 00013).
  */
 function withFreezeDefaults(profile: Profile): Profile {
   if (isSupabaseConfigured || typeof profile.streak_freezes === 'number') return profile
-  return { ...profile, streak_freezes: 0 }
+  return { ...profile, streak_freezes: STARTING_STREAK_FREEZES }
 }
 
 /** Every profile leaves this service with its optional fields settled. */

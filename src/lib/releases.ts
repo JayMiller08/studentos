@@ -29,6 +29,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    date: '2026-09-20',
+    title: 'Your streak freeze is ready when you need it',
+    changes: [
+      {
+        kind: 'fixed',
+        title: 'Streak freezes now cover you from day one',
+        body: 'A freeze only arrived after seven days in a row, so a missed day could still reset your streak before you had one to spend — including for everyone already studying when freezes launched. You now start with a freeze, and still earn another for every 7 days in a row, up to 2.',
+      },
+    ],
+  },
+  {
     date: '2026-09-16',
     title: 'Images in notes, colourful code and cleaner checklists',
     changes: [

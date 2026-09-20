@@ -7,6 +7,17 @@ export const STREAK_FREEZE_EVERY_DAYS = 7
 /** The most streak freezes a student can hold at once. */
 export const MAX_STREAK_FREEZES = 2
 
+/**
+ * Freezes a student starts with.
+ *
+ * One, not none: earning the first only at seven days in a row meant a student
+ * was unprotected for their first week — exactly when a streak is easiest to
+ * lose — and every student already using the app was left holding nothing on
+ * the day the feature arrived. Migration 00013 grants it in the database;
+ * this is the same grant for the local demo store.
+ */
+export const STARTING_STREAK_FREEZES = 1
+
 /** The profile fields the streak rules read. */
 export interface StreakProfile {
   current_streak: number
