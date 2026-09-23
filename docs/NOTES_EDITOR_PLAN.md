@@ -212,9 +212,19 @@ remains, pre-existing, from note cards using `<h3>`.
 
 # Later: pasted images
 
-Paste an image (a screenshot, an image copied from anywhere) or drop one into a
-note, and it is stored and added where the cursor was. `note-image.ts` is the
-editor side; `note-images-service.ts` does the storing.
+Paste an image (a screenshot, an image copied from anywhere), drop one in, or
+pick one with the toolbar's image button, and it is stored and added where the
+cursor was. `note-image.ts` is the editor side; `note-images-service.ts` does
+the storing.
+
+All three routes run the same `startUpload`, reached from the toolbar through
+the `insertImageFiles` command — one path, so an image behaves identically
+however it was chosen. **Shipping it on paste and drop alone was a mistake**:
+neither is visible, and on a phone there is no drag and no clipboard image to
+speak of, so for most students the feature may as well not have existed. A
+capability with no control in the toolbar is one nobody finds;
+`rich-note-editor.test.ts` now holds the toolbar to an exact list of controls
+so the next one cannot ship hidden.
 
 **The note stays Markdown.** A pasted image is `![alt](note-image:<uuid>.<ext>)`.
 That `src` is a reference, not a URL: the files are private, private URLs

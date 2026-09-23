@@ -29,6 +29,22 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    date: '2026-09-23',
+    title: 'An image button, and checklists that mind their own business',
+    changes: [
+      {
+        kind: 'new',
+        title: 'Add an image from the toolbar',
+        body: 'Notes have an image button now — pick a picture from your phone or computer, no pasting needed. Pasting a screenshot and dragging a file in still work exactly as before.',
+      },
+      {
+        kind: 'fixed',
+        title: 'Misspelled words are no longer struck out',
+        body: 'In a checklist, a word your browser thought was misspelled could appear with a line through it, as though the item were done. Only ticked items are struck through now.',
+      },
+    ],
+  },
+  {
     date: '2026-09-20',
     title: 'Your streak freeze is ready when you need it',
     changes: [

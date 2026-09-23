@@ -68,21 +68,24 @@ export function imagesToInsert(
   data: Pick<DataTransfer, 'files' | 'items' | 'getData'> | null | undefined,
 ): File[] {
   if (!data) return []
-  let files = Array.from(data.files ?? []).filter(isImage)
+  let files = pickImageFiles(data.files ?? [])
   // Some browsers only list a pasted image among the clipboard's items.
   if (files.length === 0) {
-    files = Array.from(data.items ?? [])
-      .filter((item) => item.kind === 'file')
-      .map((item) => item.getAsFile())
-      .filter((file): file is File => file !== null && isImage(file))
+    files = pickImageFiles(
+      Array.from(data.items ?? [])
+        .filter((item) => item.kind === 'file')
+        .map((item) => item.getAsFile())
+        .filter((file): file is File => file !== null),
+    )
   }
   if (files.length === 0) return []
   if (data.getData('text/plain').trim()) return []
   return files
 }
 
-function isImage(file: File): boolean {
-  return file.type.startsWith('image/')
+/** The images among a set of files — what a file picker hands back, minus anything else. */
+export function pickImageFiles(files: Iterable<File>): File[] {
+  return Array.from(files).filter((file) => file.type.startsWith('image/'))
 }
 
 /** Whether an image can be stored exactly as it came: a stored format, and neither heavy nor huge. */
