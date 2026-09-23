@@ -1,3 +1,4 @@
+import type { Editor } from '@tiptap/core'
 import { Image, type ImageOptions } from '@tiptap/extension-image'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view'
@@ -8,7 +9,20 @@ import {
   NOTE_IMAGE_MESSAGES,
   NoteImageError,
   noteImagesService,
+  pickImageFiles,
 } from '@/services/note-images-service'
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    noteImage: {
+      /**
+       * Store these images and add them where the cursor is. What the toolbar's
+       * image button runs, so choosing a file does exactly what pasting one does.
+       */
+      insertImageFiles: (files: File[]) => ReturnType
+    }
+  }
+}
 
 export interface NoteImageOptions extends ImageOptions {
   /** Stores a pasted or dropped image and returns the `src` the note keeps for it. */
@@ -53,6 +67,70 @@ function uploadPlaceholder(previews: string[]): HTMLElement {
   label.textContent = previews.length === 1 ? 'Adding image…' : `Adding ${previews.length} images…`
   element.append(label)
   return element
+}
+
+/**
+ * Store these images and put them in the note — the one path every way of
+ * adding an image runs through, whether it arrived by paste, by drop, or from
+ * the toolbar's file picker.
+ *
+ * `droppedAt` is the position a drop landed on; null means "where the cursor
+ * is", and replaces the selection the way pasting over selected text does.
+ */
+function startUpload(
+  editor: Editor,
+  options: NoteImageOptions,
+  name: string,
+  files: File[],
+  droppedAt: number | null,
+): void {
+  const view = editor.view
+  const batch = files.slice(0, MAX_IMAGES_AT_ONCE)
+  const id = `upload-${++uploadCount}`
+  const previews = batch.map(previewOf)
+
+  // A paste replaces what is selected; a drop lands where it was dropped.
+  const tr = droppedAt === null ? view.state.tr.deleteSelection() : view.state.tr
+  let pos = droppedAt ?? tr.selection.from
+  const $pos = tr.doc.resolve(pos)
+  // Code can't hold an image, and splitting the block in two would be worse
+  // than putting the image after it.
+  if ($pos.parent.type.spec.code) pos = $pos.after()
+  view.dispatch(tr.setMeta(uploads, { add: { id, pos, previews } } satisfies UploadMeta))
+
+  void Promise.allSettled(batch.map((file) => options.upload(file))).then((results) => {
+    if (!editor.isDestroyed) {
+      const placeholder = uploads.getState(editor.state)?.find(undefined, undefined, (spec) => spec.id === id)[0]
+      const sources = results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
+      const { selection } = editor.state
+      // Keep typing after the image if the cursor never moved; leave it alone if it did.
+      const cursorWaited = selection.empty && selection.from === placeholder?.from
+
+      let chain = editor.chain().command(({ tr: done }) => {
+        done.setMeta(uploads, { done: id } satisfies UploadMeta)
+        return true
+      })
+      // No placeholder means the text around it was deleted while uploading —
+      // the student took the image out before it arrived.
+      if (placeholder && sources.length > 0) {
+        chain = chain.insertContentAt(
+          placeholder.from,
+          sources.map((src) => ({ type: name, attrs: { src } })),
+          { updateSelection: cursorWaited },
+        )
+      }
+      chain.run()
+    }
+
+    for (const preview of previews) if (preview) URL.revokeObjectURL(preview)
+
+    const failure = results.find((result) => result.status === 'rejected')
+    if (failure) {
+      options.onError(
+        failure.reason instanceof NoteImageError ? failure.reason.message : NOTE_IMAGE_MESSAGES.uploadFailed,
+      )
+    }
+  })
 }
 
 function dropPosition(view: EditorView, event: DragEvent): number | null {
@@ -174,60 +252,25 @@ export const NoteImage = Image.extend<NoteImageOptions>({
     }
   },
 
+  addCommands() {
+    return {
+      insertImageFiles:
+        (files: File[]) =>
+        ({ editor }) => {
+          const images = pickImageFiles(files)
+          if (images.length === 0) return false
+          startUpload(editor, this.options, this.name, images, null)
+          return true
+        },
+    }
+  },
+
   addProseMirrorPlugins() {
     const { editor, name } = this
     const options = this.options
 
-    const addImages = (view: EditorView, files: File[], droppedAt: number | null) => {
-      const batch = files.slice(0, MAX_IMAGES_AT_ONCE)
-      const id = `upload-${++uploadCount}`
-      const previews = batch.map(previewOf)
-
-      // A paste replaces what is selected; a drop lands where it was dropped.
-      const tr = droppedAt === null ? view.state.tr.deleteSelection() : view.state.tr
-      let pos = droppedAt ?? tr.selection.from
-      const $pos = tr.doc.resolve(pos)
-      // Code can't hold an image, and splitting the block in two would be worse
-      // than putting the image after it.
-      if ($pos.parent.type.spec.code) pos = $pos.after()
-      view.dispatch(tr.setMeta(uploads, { add: { id, pos, previews } } satisfies UploadMeta))
-
-      void Promise.allSettled(batch.map((file) => options.upload(file))).then((results) => {
-        if (!editor.isDestroyed) {
-          const placeholder = uploads
-            .getState(editor.state)
-            ?.find(undefined, undefined, (spec) => spec.id === id)[0]
-          const sources = results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
-          const { selection } = editor.state
-          // Keep typing after the image if the cursor never moved; leave it alone if it did.
-          const cursorWaited = selection.empty && selection.from === placeholder?.from
-
-          let chain = editor.chain().command(({ tr: done }) => {
-            done.setMeta(uploads, { done: id } satisfies UploadMeta)
-            return true
-          })
-          // No placeholder means the text around it was deleted while uploading —
-          // the student took the image out before it arrived.
-          if (placeholder && sources.length > 0) {
-            chain = chain.insertContentAt(
-              placeholder.from,
-              sources.map((src) => ({ type: name, attrs: { src } })),
-              { updateSelection: cursorWaited },
-            )
-          }
-          chain.run()
-        }
-
-        for (const preview of previews) if (preview) URL.revokeObjectURL(preview)
-
-        const failure = results.find((result) => result.status === 'rejected')
-        if (failure) {
-          options.onError(
-            failure.reason instanceof NoteImageError ? failure.reason.message : NOTE_IMAGE_MESSAGES.uploadFailed,
-          )
-        }
-      })
-    }
+    const addImages = (files: File[], droppedAt: number | null) =>
+      startUpload(editor, options, name, files, droppedAt)
 
     return [
       ...(this.parent?.() ?? []),
@@ -254,11 +297,11 @@ export const NoteImage = Image.extend<NoteImageOptions>({
         },
         props: {
           decorations: (state) => uploads.getState(state),
-          handlePaste: (view, event) => {
+          handlePaste: (_view, event) => {
             const files = imagesToInsert(event.clipboardData)
             if (files.length === 0) return false
             event.preventDefault()
-            addImages(view, files, null)
+            addImages(files, null)
             return true
           },
           handleDrop: (view, event, _slice, moved) => {
@@ -267,7 +310,7 @@ export const NoteImage = Image.extend<NoteImageOptions>({
             const files = imagesToInsert(event.dataTransfer)
             if (files.length === 0) return false
             event.preventDefault()
-            addImages(view, files, dropPosition(view, event) ?? view.state.selection.to)
+            addImages(files, dropPosition(view, event) ?? view.state.selection.to)
             return true
           },
         },

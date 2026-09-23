@@ -7,6 +7,7 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  ImagePlus,
   Italic,
   Link2,
   Link2Off,
@@ -68,6 +69,45 @@ function ToolbarButton({
     >
       <Icon aria-hidden className="size-4" />
     </button>
+  )
+}
+
+/**
+ * Add an image by choosing a file.
+ *
+ * Pasting and dropping already worked, but neither is something a student can
+ * see, and on a phone there is no drag and no clipboard image to speak of. The
+ * button runs the same command those do, so an image gets there the same way
+ * however it was chosen.
+ */
+function ImageButton({ editor }: { editor: Editor }) {
+  const fileInput = React.useRef<HTMLInputElement>(null)
+
+  return (
+    <>
+      <ToolbarButton
+        label="Insert image"
+        icon={ImagePlus}
+        onClick={() => fileInput.current?.click()}
+      />
+      <input
+        ref={fileInput}
+        type="file"
+        // Every image type, as with a paste: anything the browser can read is
+        // converted before it is stored.
+        accept="image/*"
+        multiple
+        tabIndex={-1}
+        aria-hidden
+        className="hidden"
+        onChange={(event) => {
+          const files = Array.from(event.target.files ?? [])
+          // Cleared, so choosing the same file twice still counts as a change.
+          event.target.value = ''
+          if (files.length > 0) editor.chain().focus().insertImageFiles(files).run()
+        }}
+      />
+    </>
   )
 }
 
@@ -249,6 +289,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         active={state.codeBlock}
         onClick={() => editor.chain().focus().toggleCodeBlock().run()}
       />
+      <ImageButton editor={editor} />
 
       <Separator orientation="vertical" className="mx-1 !h-5" />
 

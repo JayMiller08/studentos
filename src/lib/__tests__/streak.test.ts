@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 // `?raw` rather than node:fs — the app tsconfig excludes Node types.
 import migration from '../../../supabase/migrations/00011_streak_freezes.sql?raw'
+import grant from '../../../supabase/migrations/00013_streak_freeze_grant.sql?raw'
 import {
   advanceStreak,
   effectiveStreak,
   heldFreezes,
   isStreakProtected,
   MAX_STREAK_FREEZES,
+  STARTING_STREAK_FREEZES,
   STREAK_FREEZE_EVERY_DAYS,
 } from '@/lib/streak'
 
@@ -199,10 +201,51 @@ describe('heldFreezes', () => {
   })
 })
 
+describe('the freeze every student starts with', () => {
+  it('saves a young streak from a single missed day', () => {
+    // The reported bug: five days in, one day missed, and the streak went back
+    // to 1 — because the first freeze was only earned at seven days in a row,
+    // so nobody had one when they needed it.
+    const advance = advanceStreak(
+      {
+        current_streak: 5,
+        longest_streak: 5,
+        last_active_date: '2026-09-07',
+        streak_freezes: STARTING_STREAK_FREEZES,
+      },
+      NOW,
+    )
+    expect(advance?.usedFreeze).toBe(true)
+    expect(advance?.patch.current_streak).toBe(6)
+    expect(advance?.patch.streak_freezes).toBe(0)
+  })
+
+  it('is spent once, not an endless pass', () => {
+    const spent = advanceStreak(
+      { current_streak: 6, longest_streak: 6, last_active_date: '2026-09-07', streak_freezes: 0 },
+      NOW,
+    )
+    expect(spent?.patch.current_streak).toBe(1)
+  })
+})
+
 describe('the rules the release notes promise', () => {
-  it('earns one every 7 days and holds up to 2', () => {
+  it('starts with one, earns one every 7 days, holds up to 2', () => {
+    expect(STARTING_STREAK_FREEZES).toBe(1)
     expect(STREAK_FREEZE_EVERY_DAYS).toBe(7)
     expect(MAX_STREAK_FREEZES).toBe(2)
+  })
+})
+
+describe('migration 00013', () => {
+  const sql = grant.replace(/\s+/g, ' ')
+
+  it('starts new profiles with a freeze', () => {
+    expect(sql).toMatch(/alter column streak_freezes set default 1/i)
+  })
+
+  it('tops up the students who were left holding none', () => {
+    expect(sql).toMatch(/update public\.profiles set streak_freezes = 1 where streak_freezes < 1/i)
   })
 })
 

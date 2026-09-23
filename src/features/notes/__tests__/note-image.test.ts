@@ -204,6 +204,42 @@ describe('when an image cannot be added', () => {
   })
 })
 
+describe('choosing an image from the toolbar', () => {
+  it('stores it and adds it where the cursor is', async () => {
+    const upload = vi.fn(async () => STORED)
+    const ed = mount('Before After', { upload })
+    ed.commands.setTextSelection(8)
+
+    expect(ed.commands.insertImageFiles([png()])).toBe(true)
+    await settle()
+
+    expect(upload).toHaveBeenCalledOnce()
+    expect(blocks(ed)).toEqual(['paragraph:Before ', 'image:' + STORED, 'paragraph:After'])
+  })
+
+  it('ignores a file that is not an image', () => {
+    const upload = vi.fn(async () => STORED)
+    const ed = mount('', { upload })
+    const notes = new File([new Uint8Array([37, 80])], 'notes.pdf', { type: 'application/pdf' })
+    expect(ed.commands.insertImageFiles([notes])).toBe(false)
+    expect(upload).not.toHaveBeenCalled()
+  })
+
+  it('reports a failure the same way a paste does', async () => {
+    const onError = vi.fn()
+    const ed = mount('', {
+      upload: async () => {
+        throw new NoteImageError(NOTE_IMAGE_MESSAGES.tooLarge)
+      },
+      onError,
+    })
+    ed.commands.insertImageFiles([png()])
+    await settle()
+    expect(onError).toHaveBeenCalledWith(NOTE_IMAGE_MESSAGES.tooLarge)
+    expect(blocks(ed).some((block) => block.startsWith('image:'))).toBe(false)
+  })
+})
+
 describe('dropping an image', () => {
   it('adds a dropped image file', async () => {
     const ed = mount('Text')
