@@ -311,14 +311,17 @@ export function PlannerPage() {
         ) : null}
 
         {view === 'week' ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
+          // Seven abreast only from xl: beside the sidebar, a 1024px window
+          // gave each day 91px, and four columns there read better than seven
+          // slivers. min-w-0 so a long title can never widen its day.
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 xl:gap-2">
             {weekDays.map((day) => {
               const dayKey = toDateKey(day)
               const items = tasks
                 .filter((task) => task.scheduled_on === dayKey)
                 .sort((a, b) => (a.start_minutes ?? 9999) - (b.start_minutes ?? 9999))
               return (
-                <DroppableColumn key={dayKey} id={`day:${dayKey}`} className="flex flex-col">
+                <DroppableColumn key={dayKey} id={`day:${dayKey}`} className="flex min-w-0 flex-col">
                   <div
                     className={cn(
                       'mb-2 flex items-baseline justify-between rounded-lg px-2 py-1',
@@ -338,7 +341,7 @@ export function PlannerPage() {
                         module={task.module_id ? moduleById.get(task.module_id) : undefined}
                         onEdit={openEdit}
                         draggable
-                        compact
+                        stacked
                       />
                     ))}
                   </div>
@@ -427,6 +430,7 @@ export function PlannerPage() {
         <EmptyState
           icon={CalendarDays}
           title="Plan your first day"
+          art="reading"
           description="Add tasks with a time and duration — StudentOS shows you exactly what's next."
           action={
             <Button

@@ -16,6 +16,20 @@ vi.mock('@/services/note-images-service', async (importOriginal) => {
 // Lets `act` flush effects and state updates without React warning about it.
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
+// jsdom has no layout engine. When a transaction asks to scroll the selection
+// into view, ProseMirror measures the caret through a Range, which jsdom
+// cannot do — the throw escaped every run as an unhandled error, the kind
+// Vitest warns can hide a real failure. Zero-sized rects are an honest answer
+// for a page with no layout.
+const noRect = (): DOMRect =>
+  ({ x: 0, y: 0, top: 0, left: 0, bottom: 0, right: 0, width: 0, height: 0, toJSON: () => ({}) }) as DOMRect
+const noRects = (): DOMRectList =>
+  Object.assign([] as DOMRect[], { item: () => null }) as unknown as DOMRectList
+for (const proto of [Range.prototype, Element.prototype]) {
+  if (typeof proto.getClientRects !== 'function') proto.getClientRects = noRects
+  if (typeof proto.getBoundingClientRect !== 'function') proto.getBoundingClientRect = noRect
+}
+
 let root: Root | null = null
 let container: HTMLElement | null = null
 let markdown = ''

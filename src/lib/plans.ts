@@ -1,7 +1,7 @@
 import type { Plan } from '@/types/models'
 
 /** Resources the Free plan meters. Pro and Elite lift every cap. */
-export type CountedResource = 'assignments' | 'tasks' | 'notes'
+export type CountedResource = 'assignments' | 'tasks' | 'notes' | 'resources'
 
 export interface PlanLimits {
   /** Maximum live assignments; null = unlimited. */
@@ -10,14 +10,29 @@ export interface PlanLimits {
   tasks: number | null
   /** Maximum notes; null = unlimited. */
   notes: number | null
+  /** Study files in the library (PDFs, photos of notes); null = unlimited. */
+  resources: number | null
   /** Deadline-aware ranking and the "why this first" explanations. */
   smartPrioritization: boolean
   /** Generating a day-by-day study schedule from assignments. */
   aiPlanner: boolean
   advancedAnalytics: boolean
-  aiCoach: boolean
+  /** Generating a quiz with AI from a file or a note. Was the Coach chat; the
+   * entitlement was kept and repointed so existing Pro subscribers lose
+   * nothing. Every plan has it now — the allowance below is what differs. */
+  aiQuiz: boolean
+  /**
+   * AI quizzes per calendar month. The database enforces it
+   * (`ai_quiz_allowance`, migration 00018); plans.test.ts holds them equal.
+   */
+  aiQuizzesPerMonth: number
   careerTools: boolean
 }
+
+/** The yes-or-no capabilities a plan includes — what `has()` and PlanGate ask about. */
+export type PlanFeature = {
+  [K in keyof PlanLimits]: PlanLimits[K] extends boolean ? K : never
+}[keyof PlanLimits]
 
 export interface PlanDefinition {
   id: Plan
@@ -40,6 +55,12 @@ export function formatPlanPrice(price: number): string {
 
 export const PLAN_ORDER: readonly Plan[] = ['free', 'pro', 'elite']
 
+/**
+ * AI quizzes a month on each plan, written once: the limits and the feature
+ * lists below both read them, so the two cannot disagree.
+ */
+const AI_QUIZZES_PER_MONTH: Record<Plan, number> = { free: 3, pro: 40, elite: 150 }
+
 export const PLANS: Record<Plan, PlanDefinition> = {
   free: {
     id: 'free',
@@ -50,10 +71,12 @@ export const PLANS: Record<Plan, PlanDefinition> = {
       assignments: 3,
       tasks: 30,
       notes: 15,
+      resources: 15,
       smartPrioritization: false,
       aiPlanner: false,
       advancedAnalytics: false,
-      aiCoach: false,
+      aiQuiz: true,
+      aiQuizzesPerMonth: AI_QUIZZES_PER_MONTH.free,
       careerTools: false,
     },
     features: [
@@ -61,7 +84,7 @@ export const PLANS: Record<Plan, PlanDefinition> = {
       'Calendar',
       'Pomodoro focus timer',
       'Habit tracker',
-      'Budget tracking',
+      `${AI_QUIZZES_PER_MONTH.free} AI quizzes a month from your files and notes`,
       'Up to 3 active assignments',
       '30 unfinished tasks & 15 notes',
     ],
@@ -75,15 +98,18 @@ export const PLANS: Record<Plan, PlanDefinition> = {
       assignments: null,
       tasks: null,
       notes: null,
+      resources: null,
       smartPrioritization: true,
       aiPlanner: true,
       advancedAnalytics: true,
-      aiCoach: true,
+      aiQuiz: true,
+      aiQuizzesPerMonth: AI_QUIZZES_PER_MONTH.pro,
       careerTools: false,
     },
     features: [
       'Everything in Free',
       'Unlimited assignments & tasks',
+      `${AI_QUIZZES_PER_MONTH.pro} AI quizzes a month from your lecture files, photos and notes`,
       'AI study planner',
       'Smart prioritization',
       'Advanced analytics',
@@ -99,14 +125,17 @@ export const PLANS: Record<Plan, PlanDefinition> = {
       assignments: null,
       tasks: null,
       notes: null,
+      resources: null,
       smartPrioritization: true,
       aiPlanner: true,
       advancedAnalytics: true,
-      aiCoach: true,
+      aiQuiz: true,
+      aiQuizzesPerMonth: AI_QUIZZES_PER_MONTH.elite,
       careerTools: true,
     },
     features: [
       'Everything in Pro',
+      `${AI_QUIZZES_PER_MONTH.elite} AI quizzes a month`,
       'Career dashboard',
       'Resume builder',
       'Portfolio & internship tracker',
@@ -125,6 +154,7 @@ const RESOURCE_LABEL: Record<CountedResource, string> = {
   assignments: 'active assignments',
   tasks: 'unfinished tasks',
   notes: 'notes',
+  resources: 'study files',
 }
 
 /**

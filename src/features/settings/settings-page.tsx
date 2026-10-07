@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Check, Compass, Loader2, Monitor, Moon, Sun } from 'lucide-react'
+import { Bell, Check, Compass, Languages, Loader2, Monitor, Moon, Palette, Sun, Target, UserRound } from 'lucide-react'
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -54,7 +54,6 @@ const NOTIFICATION_OPTIONS: Array<{ key: keyof NotificationPrefs; label: string;
   { key: 'assignments', label: 'Assignment reminders', description: 'Deadlines approaching and overdue work' },
   { key: 'exams', label: 'Exam reminders', description: 'Upcoming exams from your calendar' },
   { key: 'habits', label: 'Habit reminders', description: 'Daily nudges for your habits' },
-  { key: 'budget', label: 'Budget alerts', description: 'When spending nears your monthly limit' },
   { key: 'study_reminders', label: 'Study reminders', description: 'Planned focus blocks and streaks' },
   { key: 'email_digest', label: 'Weekly email digest', description: 'A summary of your week, every Sunday' },
 ]
@@ -95,7 +94,9 @@ function ProfileTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Profile</CardTitle>
+        <CardTitle className="flex items-center gap-2.5">
+          <UserRound aria-hidden className="text-primary" /> Profile
+        </CardTitle>
         <CardDescription>Your academic identity across StudentOS</CardDescription>
       </CardHeader>
       <CardContent>
@@ -223,7 +224,9 @@ function GoalsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Goals</CardTitle>
+        <CardTitle className="flex items-center gap-2.5">
+          <Target aria-hidden className="text-primary" /> Goals
+        </CardTitle>
         <CardDescription>
           What StudentOS should help you focus on — choose 1 to {MAX_GOALS}
         </CardDescription>
@@ -286,7 +289,9 @@ function AppearanceTab() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Theme</CardTitle>
+          <CardTitle className="flex items-center gap-2.5">
+            <Palette aria-hidden className="text-primary" /> Theme
+          </CardTitle>
           <CardDescription>How StudentOS looks on this device</CardDescription>
         </CardHeader>
         <CardContent>
@@ -313,7 +318,9 @@ function AppearanceTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Language</CardTitle>
+          <CardTitle className="flex items-center gap-2.5">
+            <Languages aria-hidden className="text-primary" /> Language
+          </CardTitle>
           <CardDescription>Interface language (more languages coming soon)</CardDescription>
         </CardHeader>
         <CardContent>
@@ -333,7 +340,9 @@ function AppearanceTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Product tours</CardTitle>
+          <CardTitle className="flex items-center gap-2.5">
+            <Compass aria-hidden className="text-primary" /> Product tours
+          </CardTitle>
           <CardDescription>
             Every page has a short walkthrough that plays the first time you open it. Replay the one
             for the page you are on with the compass in the top bar — or start them all over.
@@ -381,7 +390,9 @@ function NotificationsTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Notifications</CardTitle>
+        <CardTitle className="flex items-center gap-2.5">
+          <Bell aria-hidden className="text-primary" /> Notifications
+        </CardTitle>
         <CardDescription>Choose what StudentOS reminds you about</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">

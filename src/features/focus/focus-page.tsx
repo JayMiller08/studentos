@@ -1,21 +1,11 @@
 import { format, parseISO } from 'date-fns'
-import {
-  Brain,
-  Flame,
-  Pause,
-  Play,
-  RotateCcw,
-  SkipForward,
-  Timer,
-  Volume2,
-  VolumeX,
-  Zap,
-} from 'lucide-react'
+import { Brain, Flame, History, Pause, Play, RotateCcw, SkipForward, Timer, Volume2, VolumeX, Zap } from 'lucide-react'
 import * as React from 'react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ProgressRing } from '@/components/ui/progress-ring'
 import {
   Card,
   CardContent,
@@ -48,38 +38,31 @@ function CircularTimer({
   totalMs: number
   phase: PomodoroPhase
 }) {
-  const radius = 110
-  const circumference = 2 * Math.PI * radius
   const fraction = totalMs > 0 ? remainingMs / totalMs : 0
   const minutes = Math.floor(remainingMs / 60_000)
   const seconds = Math.floor((remainingMs % 60_000) / 1000)
 
   return (
-    <div className="relative mx-auto size-64" role="timer" aria-live="off" aria-label={`${PHASE_LABEL[phase]} timer`}>
-      <svg viewBox="0 0 256 256" className="size-full -rotate-90">
-        <circle cx="128" cy="128" r={radius} fill="none" strokeWidth="10" className="stroke-muted" />
-        <circle
-          cx="128"
-          cy="128"
-          r={radius}
-          fill="none"
-          strokeWidth="10"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - fraction)}
-          className={cn(
-            'transition-[stroke-dashoffset] duration-500',
-            phase === 'focus' ? 'stroke-primary' : 'stroke-success',
-          )}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-5xl font-semibold tabular-nums tracking-tight">
-          {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-        </span>
-        <span className="text-muted-foreground mt-1 text-sm">{PHASE_LABEL[phase]}</span>
-      </div>
-    </div>
+    <ProgressRing
+      value={fraction}
+      thickness={10}
+      className="mx-auto size-64"
+      // The arc glows in its own colour: the timer is the one thing on this
+      // page the eye should keep coming back to.
+      arcClassName={
+        phase === 'focus'
+          ? 'stroke-primary drop-shadow-[0_0_10px_var(--glow-primary)]'
+          : 'stroke-success drop-shadow-[0_0_10px_color-mix(in_oklch,var(--success)_45%,transparent)]'
+      }
+      role="timer"
+      aria-live="off"
+      aria-label={`${PHASE_LABEL[phase]} timer`}
+    >
+      <span className="font-display text-6xl font-semibold tracking-tight tabular-nums">
+        {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+      </span>
+      <span className="text-muted-foreground mt-1 text-sm">{PHASE_LABEL[phase]}</span>
+    </ProgressRing>
   )
 }
 
@@ -435,7 +418,9 @@ export function FocusPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Recent sessions</CardTitle>
+          <CardTitle className="flex items-center gap-2.5 text-base">
+            <History aria-hidden className="text-primary" /> Recent sessions
+          </CardTitle>
           <CardDescription>
             {stats.totalSessions} sessions · {stats.totalDistractions} distractions logged
           </CardDescription>

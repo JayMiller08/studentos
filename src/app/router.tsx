@@ -181,10 +181,18 @@ const routes: RouteObject[] = [
         },
       },
       {
-        path: 'coach',
+        path: 'quiz',
         lazy: async () => {
-          const { CoachPage } = await import('@/features/ai/coach-page')
-          return { element: <CoachPage /> }
+          const { QuizLibraryPage } = await import('@/features/quiz/quiz-library-page')
+          return { element: <QuizLibraryPage /> }
+        },
+      },
+      {
+        // Dynamic, so it gets no page tour — TourProvider keys tours by path.
+        path: 'quiz/:id',
+        lazy: async () => {
+          const { QuizRunnerPage } = await import('@/features/quiz/quiz-runner-page')
+          return { element: <QuizRunnerPage /> }
         },
       },
       {
@@ -202,17 +210,24 @@ const routes: RouteObject[] = [
         },
       },
       {
-        path: 'budget',
-        lazy: async () => {
-          const { BudgetPage } = await import('@/features/budget/budget-page')
-          return { element: <BudgetPage /> }
-        },
-      },
-      {
         path: 'notes',
         lazy: async () => {
           const { NotesPage } = await import('@/features/notes/notes-page')
           return { element: <NotesPage /> }
+        },
+      },
+      {
+        path: 'quests',
+        lazy: async () => {
+          const { QuestsPage } = await import('@/features/quests/quests-page')
+          return { element: <QuestsPage /> }
+        },
+      },
+      {
+        path: 'squad',
+        lazy: async () => {
+          const { SquadPage } = await import('@/features/squad/squad-page')
+          return { element: <SquadPage /> }
         },
       },
       {

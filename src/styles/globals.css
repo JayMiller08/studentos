@@ -12,8 +12,13 @@
 :root {
   --radius: 0.75rem;
 
-  /* App backdrop: soft white → blue wash (light mode). */
-  --app-gradient: linear-gradient(160deg, #ffffff 0%, #eff5ff 42%, #d9e7fb 100%);
+  /* App backdrop (light): a cool near-white base lit from above. The radial
+     "spotlight" is what gives the page a top and a bottom — the old diagonal
+     wash was even everywhere, so nothing on the page felt placed. */
+  --app-gradient:
+    radial-gradient(1100px 560px at 50% -12%, oklch(0.78 0.12 262 / 0.5), transparent 65%),
+    radial-gradient(700px 420px at 100% 0%, oklch(0.82 0.09 300 / 0.22), transparent 60%),
+    linear-gradient(180deg, oklch(0.985 0.004 262) 0%, oklch(0.968 0.008 262) 100%);
 
   --background: oklch(0.984 0.003 247.858);
   --foreground: oklch(0.208 0.042 265.755);
@@ -23,14 +28,20 @@
   --popover-foreground: oklch(0.208 0.042 265.755);
 
   --primary: oklch(0.546 0.245 262.881);
-  /* Light theme already clears 4.5:1 with a white label (5.02:1), so the fill
-     and the accent can be the same colour here. */
-  --primary-strong: oklch(0.546 0.245 262.881);
+  /* The fill behind white button labels, and small primary text that sits on
+     the lit backdrop. It used to equal --primary (5.02:1 on a white card), but
+     the page's overhead light tints the backdrop, and a primary-coloured
+     eyebrow over it measured 4.40:1. Darker here, never in dark mode. */
+  --primary-strong: oklch(0.5 0.235 263);
   --primary-foreground: oklch(0.985 0.002 247.839);
   --secondary: oklch(0.93 0.034 272.788);
   --secondary-foreground: oklch(0.457 0.24 277.023);
   --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
+  /* 0.554 cleared 4.5:1 on a white card with almost nothing to spare (4.70 in
+     the sidebar, 4.76 in the player card) and failed on the lit backdrop
+     (4.21 under the page title). Darkened so secondary text passes everywhere
+     it appears, not only on the whitest surface. */
+  --muted-foreground: oklch(0.505 0.046 257.417);
   --accent: oklch(0.951 0.013 255.508);
   --accent-foreground: oklch(0.208 0.042 265.755);
 
@@ -59,11 +70,72 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.546 0.245 262.881);
+
+  /* ── Surface tiers ──────────────────────────────────────────────────────
+     Depth is the difference between "a page of boxes" and a considered
+     interface. In light mode the surfaces stay near-white and the shadow does
+     the work; in dark mode the surface itself lifts (see .dark below). */
+  --surface-1: oklch(1 0 0);
+  --surface-2: oklch(0.995 0.002 247.858);
+  --surface-3: oklch(0.985 0.004 247.858);
+
+  --elevation-1: 0 1px 2px oklch(0.208 0.042 265.755 / 0.06);
+  --elevation-2: 0 6px 20px -4px oklch(0.208 0.042 265.755 / 0.1);
+  --elevation-3: 0 18px 44px -10px oklch(0.208 0.042 265.755 / 0.16);
+
+  /* ── Reward accents ─────────────────────────────────────────────────────
+     Deliberately outside the blue/indigo family that carries navigation, so a
+     reward never competes with a link. Used for XP, streaks, quests, leagues —
+     and nothing else. */
+  /* Lightness pinned at 0.54 so each clears 4.5:1 as text on a white card —
+     measured, not guessed: at the first pass (0.66/0.62/0.55) amber came out at
+     3.20:1 and orange at 4.02:1, which is fine for a fill and unreadable as the
+     "2,480 XP" label beside it. White labels on these as fills clear 4.5:1 too. */
+  --xp: oklch(0.54 0.132 73);
+  --xp-foreground: oklch(0.985 0.002 247.839);
+  --streak: oklch(0.54 0.196 31);
+  --streak-foreground: oklch(0.985 0.002 247.839);
+  --quest: oklch(0.55 0.223 299);
+  --quest-foreground: oklch(0.985 0.002 247.839);
+  --league: oklch(0.54 0.112 205);
+  --league-foreground: oklch(0.985 0.002 247.839);
+
+  /* Frosted surfaces: the header and bottom nav already do this by hand. */
+  --glass-bg: oklch(1 0 0 / 0.72);
+  --glass-border: oklch(0.208 0.042 265.755 / 0.08);
+
+  /* ── Console finish ────────────────────────────────────────────────────
+     The details that separate a considered interface from a component kit:
+     a sheen on every card, a faint dot grid under the page, a glow behind the
+     primary action, and an inset track for segmented controls. */
+  --card-sheen: oklch(1 0 0 / 0);
+  --grid-dot: oklch(0.45 0.06 262 / 0.08);
+  --glow-primary: oklch(0.546 0.245 262.881 / 0.34);
+  --track-shadow: inset 0 1px 2px oklch(0.208 0.042 265.755 / 0.1);
+  --button-shadow:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.2), 0 1px 2px oklch(0.208 0.042 265.755 / 0.16),
+    0 4px 14px -4px var(--glow-primary);
+  --button-shadow-hover:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.24), 0 1px 2px oklch(0.208 0.042 265.755 / 0.16),
+    0 8px 22px -6px var(--glow-primary);
+
+  /* ── Motion ─────────────────────────────────────────────────────────────
+     Restrained everywhere; spring is reserved for reward moments. */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 420ms;
 }
 
 .dark {
-  /* App backdrop: deep navy → lighter blue wash (dark mode). */
-  --app-gradient: linear-gradient(160deg, #070d1c 0%, #0e1c3a 55%, #1b3a68 100%);
+  /* App backdrop (dark): a near-black console lit from above, with a violet
+     cast off to one side and a faint teal one below. Kept darker than every
+     surface so cards read as lifted off it, which the old navy wash — lighter
+     at the bottom-right than the cards themselves — could not do. */
+  --app-gradient:
+    radial-gradient(1100px 600px at 50% -14%, oklch(0.52 0.21 262 / 0.38), transparent 62%),
+    radial-gradient(760px 480px at 100% 0%, oklch(0.5 0.19 300 / 0.15), transparent 60%),
+    radial-gradient(640px 420px at 0% 100%, oklch(0.5 0.12 205 / 0.09), transparent 60%),
+    linear-gradient(180deg, oklch(0.118 0.03 265) 0%, oklch(0.104 0.027 265) 100%);
 
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.968 0.007 247.896);
@@ -117,11 +189,50 @@
   --sidebar-accent-foreground: oklch(0.968 0.007 247.896);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.623 0.214 259.815);
+
+  /* Dark surfaces lift by getting lighter, the way a real material catches
+     light. The inset hairline in each elevation is what stops a dark card
+     reading as a hole in the page. */
+  --surface-1: oklch(0.183 0.041 265.4);
+  --surface-2: oklch(0.212 0.041 265.4);
+  --surface-3: oklch(0.246 0.041 265.4);
+
+  --elevation-1: 0 1px 2px oklch(0 0 0 / 0.3), inset 0 1px 0 oklch(1 0 0 / 0.04);
+  --elevation-2: 0 4px 16px -2px oklch(0 0 0 / 0.4), inset 0 1px 0 oklch(1 0 0 / 0.06);
+  --elevation-3: 0 16px 40px -8px oklch(0 0 0 / 0.55), inset 0 1px 0 oklch(1 0 0 / 0.08);
+
+  /* Brighter than the light-mode accents: on a near-black surface these are
+     read as text and glyphs far more often than as fills. */
+  --xp: oklch(0.82 0.152 78);
+  --xp-foreground: oklch(0.16 0.03 265);
+  --streak: oklch(0.74 0.176 42);
+  --streak-foreground: oklch(0.16 0.03 265);
+  --quest: oklch(0.74 0.163 300);
+  --quest-foreground: oklch(0.16 0.03 265);
+  --league: oklch(0.78 0.114 205);
+  --league-foreground: oklch(0.16 0.03 265);
+
+  --glass-bg: oklch(0.16 0.036 265.4 / 0.7);
+  --glass-border: oklch(1 0 0 / 0.08);
+
+  --card-sheen: oklch(1 0 0 / 0.045);
+  --grid-dot: oklch(1 0 0 / 0.05);
+  --glow-primary: oklch(0.623 0.214 259.815 / 0.45);
+  --track-shadow: inset 0 1px 3px oklch(0 0 0 / 0.5);
+  --button-shadow:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.18), 0 1px 2px oklch(0 0 0 / 0.4),
+    0 4px 16px -4px var(--glow-primary);
+  --button-shadow-hover:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.22), 0 1px 2px oklch(0 0 0 / 0.4),
+    0 8px 26px -6px var(--glow-primary);
 }
 
 @theme inline {
   --font-sans:
     'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display:
+    'Space Grotesk Variable', 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+    sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -166,6 +277,37 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
+
+  /* Surfaces, rewards and glass as utilities: bg-surface-2, text-xp, border-glass. */
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-xp: var(--xp);
+  --color-xp-foreground: var(--xp-foreground);
+  --color-streak: var(--streak);
+  --color-streak-foreground: var(--streak-foreground);
+  --color-quest: var(--quest);
+  --color-quest-foreground: var(--quest-foreground);
+  --color-league: var(--league);
+  --color-league-foreground: var(--league-foreground);
+  --color-glass: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+
+  /* shadow-e1 / shadow-e2 / shadow-e3, and the finish shadows. */
+  --shadow-e1: var(--elevation-1);
+  --shadow-e2: var(--elevation-2);
+  --shadow-e3: var(--elevation-3);
+  --shadow-button: var(--button-shadow);
+  --shadow-button-hover: var(--button-shadow-hover);
+  --shadow-track: var(--track-shadow);
+  --color-glow-primary: var(--glow-primary);
+
+  /* ease-spring on reward moments; ease-emphasis for everything else. */
+  --ease-spring: linear(
+    0, 0.006, 0.025, 0.101 6.7%, 0.539 17%, 0.795 22.9%, 0.887, 0.957, 1.006, 1.036 34.5%, 1.04,
+    1.035, 1.024, 1.011 46.5%, 0.996, 0.99, 0.991, 0.998 62.5%, 1.003, 1.004, 1.001 79%, 0.999, 1
+  );
+  --ease-emphasis: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @layer base {
@@ -177,12 +319,21 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Headings speak in the display face; body copy, data and controls stay in
+     Inter, which is better at small sizes and tabular figures. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
   body {
-    /* KNOWN ISSUE: in dark mode `getComputedStyle(body).backgroundColor` is the
-       light token, and the dark appearance comes from the body::before wash
-       below. Setting background-color from var(--background) here does not
-       change it, so the cause is still unidentified. Harmless visually, but it
-       is why contrast tooling measures this app's text against white. */
+    /* `getComputedStyle(body).backgroundColor` reports the right token in both
+       themes (measured: oklch(0.129 …) dark, oklch(0.984 …) light), so contrast
+       tooling can trust it. What it cannot see is the body::before wash below,
+       which sits behind translucent surfaces — measure those against the
+       gradient, not against this. */
     @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: 'cv11', 'ss01';
     text-rendering: optimizeLegibility;
@@ -198,6 +349,21 @@
     z-index: -1;
     background: var(--app-gradient);
     pointer-events: none;
+  }
+
+  /* A faint dot grid under the top of the page, faded out by a mask so it
+     never competes with content lower down. Separate from the gradient above
+     because the mask would otherwise fade the lighting with it. */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, black 25%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, black 25%, transparent 75%);
   }
 
   /* Subtle, consistent scrollbars on desktop */
@@ -217,6 +383,34 @@
     }
   }
 
+  /* Sparks thrown by <RewardBurst>. The component itself renders nothing under
+     reduced motion, so this never needs a fallback. */
+  @keyframes reward-spark {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.4);
+    }
+    25% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(1);
+    }
+  }
+
+  /* Slow drift for the aurora blobs behind the auth pages. Deliberately long
+     and small: at this speed it reads as depth rather than as movement. The
+     reduced-motion block below stops it entirely. */
+  @keyframes aurora-drift {
+    from {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    to {
+      transform: translate3d(4%, -6%, 0) scale(1.12);
+    }
+  }
+
   /* Respect users who prefer reduced motion */
   @media (prefers-reduced-motion: reduce) {
     *,
@@ -227,5 +421,46 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+  }
+}
+
+/* Every card catches a little light at its top edge. In the components layer
+   on purpose: a utility such as HeroCard's gradient sits in the utilities
+   layer and so overrides this without anyone having to opt out. Invisible in
+   light mode, where the shadow already does the work. */
+@layer components {
+  [data-slot='card'] {
+    background-image: linear-gradient(180deg, var(--card-sheen) 0%, transparent 42%);
+  }
+}
+
+/* A gradient hairline in place of a card's border, for the one card on a page
+   that should read as featured. The ring is a masked pseudo-element rather
+   than `border-image`, which cannot follow a border-radius. `isolate` keeps
+   the ring's negative z-index inside the card, above its background. */
+@utility ring-gradient {
+  position: relative;
+  isolation: isolate;
+  border-color: transparent;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--primary) 70%, transparent),
+      var(--border) 45%,
+      color-mix(in oklch, var(--quest) 55%, transparent)
+    );
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+    pointer-events: none;
   }
 }

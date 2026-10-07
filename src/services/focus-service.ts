@@ -6,11 +6,9 @@ import {
   parseISO,
   subDays,
 } from 'date-fns'
-import { advanceStreak, type StreakAdvance } from '@/lib/streak'
 import { toDateKey } from '@/lib/utils'
 import { byUser, table } from '@/services/db'
-import { profileService } from '@/services/profile-service'
-import type { PomodoroSession, Profile, StudySession, StudySessionSource } from '@/types/models'
+import type { PomodoroSession, StudySession, StudySessionSource } from '@/types/models'
 
 const studySessions = () => table<StudySession>('study_sessions')
 const pomodoroSessions = () => table<PomodoroSession>('pomodoro_sessions')
@@ -88,13 +86,6 @@ export interface LogSessionInput {
   }
 }
 
-/** A logged session, and what logging it did to the daily streak. */
-export interface LoggedSession {
-  session: StudySession
-  /** Null when the streak didn't move: today was already counted, or nothing was studied. */
-  streak: StreakAdvance | null
-}
-
 export const focusService = {
   async listSessions(userId: string): Promise<StudySession[]> {
     return studySessions().list({
@@ -103,8 +94,15 @@ export const focusService = {
     })
   },
 
-  /** Persist a finished focus block and roll the user's daily streak forward. */
-  async logSession(userId: string, profile: Profile | null, input: LogSessionInput): Promise<LoggedSession> {
+  /**
+   * Persist a finished focus block.
+   *
+   * The streak and the XP are not this function's business any more: the
+   * caller reports the session through `useAwardXp` — as `pomodoro_completed`
+   * or `study_session` — and the database moves both (migration 00016). Doing
+   * it here meant writing the streak from a profile snapshot the client held.
+   */
+  async logSession(userId: string, input: LogSessionInput): Promise<StudySession> {
     const session = await studySessions().insert({
       user_id: userId,
       started_at: input.startedAt,
@@ -129,21 +127,6 @@ export const focusService = {
       })
     }
 
-    const streak =
-      profile && input.minutes > 0 ? await focusService.touchDailyStreak(userId, profile) : null
-
-    return { session, streak }
-  },
-
-  /**
-   * Record today's activity against the daily streak — continuing it, spending a
-   * freeze to cover a single missed day, or restarting it. The rules live in
-   * `advanceStreak`; this only persists them. Resolves to what happened, or null
-   * when today was already counted, so callers can tell the student.
-   */
-  async touchDailyStreak(userId: string, profile: Profile): Promise<StreakAdvance | null> {
-    const advance = advanceStreak(profile)
-    if (advance) await profileService.update(userId, advance.patch)
-    return advance
+    return session
   },
 }

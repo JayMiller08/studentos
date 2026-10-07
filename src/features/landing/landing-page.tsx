@@ -1,13 +1,11 @@
 import {
   ArrowRight,
   BarChart3,
-  Bot,
   BrainCircuit,
   CalendarDays,
   Check,
   ChevronDown,
   ListTodo,
-  PiggyBank,
   Repeat,
   Sparkles,
   Timer,
@@ -30,8 +28,6 @@ const FEATURES = [
   { icon: Timer, title: 'Focus that sticks', body: 'A Pomodoro timer that survives reloads, deep-work mode, ambient sound, and a distraction counter — with streaks to keep you honest.' },
   { icon: CalendarDays, title: 'Your whole semester', body: 'Class timetable, exams, deadlines and study blocks in one calendar. Set your weekly classes once and every week fills itself in.' },
   { icon: Repeat, title: 'Habits & routines', body: 'Build the small daily habits that compound — with streaks, completion rates and a satisfying 12-week heatmap.' },
-  { icon: PiggyBank, title: 'Student budgeting', body: 'Track spending by category, watch a live month-end projection, and hit your savings goals without a spreadsheet.' },
-  { icon: Bot, title: 'AI study coach', body: 'Explain concepts, generate quizzes and flashcards, summarize notes and get essay feedback — grounded in your real deadlines.' },
   { icon: BarChart3, title: 'Insightful analytics', body: 'A single productivity score plus focus, completion and weekly-trend charts that show whether the term is on track.' },
 ]
 
@@ -42,10 +38,10 @@ const TESTIMONIALS = [
 ]
 
 const FAQS = [
-  { q: 'Is there a free plan?', a: 'Yes. The Free plan includes the dashboard, planner, calendar, Pomodoro timer, habit tracker and budgeting, with up to 3 active assignments — free forever.' },
+  { q: 'Is there a free plan?', a: 'Yes. The Free plan includes the dashboard, planner, calendar, Pomodoro timer and habit tracker, with up to 3 active assignments — free forever.' },
   { q: 'What do I get with Student Pro?', a: 'Unlimited assignments and tasks, the AI study planner, smart prioritization, advanced analytics, unlimited notes and cloud sync.' },
   { q: 'Does it work on my phone?', a: 'StudentOS is a mobile-first progressive web app. Install it to your home screen on Android, iOS, or desktop and it works offline.' },
-  { q: 'Will the AI make up fake deadlines?', a: 'No. The AI coach and planner only ever reference the assignments and dates you enter. Never inventing deadlines is a core design rule.' },
+  { q: 'Will the AI make up fake deadlines?', a: 'No. The AI planner only ever references the assignments and dates you enter. Never inventing deadlines is a core design rule.' },
   { q: 'Can I cancel anytime?', a: 'Absolutely. Manage or cancel your subscription in two clicks from the billing page. No lock-in, no hassle.' },
 ]
 
@@ -102,7 +98,7 @@ function Hero() {
           </span>
         </h1>
         <p className="text-muted-foreground mx-auto mt-5 max-w-2xl text-lg text-pretty">
-          StudentOS combines planning, focus, habits, budgeting and AI into one academic command
+          StudentOS combines planning, focus, habits and AI into one academic command
           center — and actively tells you the most important thing to do right now.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -151,7 +147,7 @@ function HeroPreview() {
             <div className="flex items-center gap-2 rounded-lg border p-2.5">
               <Zap className="text-primary size-4" />
               <div className="min-w-0">
-                <p className="truncate text-xs font-medium">Level 4 · 780 XP</p>
+                <p className="truncate text-xs font-medium">Level 4 · 980 XP</p>
                 <p className="text-muted-foreground text-[11px]">4-day streak</p>
               </div>
             </div>
@@ -183,8 +179,8 @@ function Features() {
       <div className="mx-auto max-w-2xl text-center">
         <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Everything, in one place</h2>
         <p className="text-muted-foreground mt-3 text-lg">
-          Stop juggling a dozen apps. StudentOS replaces your planner, timer, habit tracker, budget
-          spreadsheet and study buddy.
+          Stop juggling a dozen apps. StudentOS replaces your planner, timer, habit tracker and
+          study buddy.
         </p>
       </div>
       <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">

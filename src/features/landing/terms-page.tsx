@@ -29,9 +29,8 @@ export function TermsPage() {
           <p>StudentOS provides a comprehensive digital study management platform designed for high school and tertiary students. Core platform capabilities include:</p>
           <ul className="list-disc pl-6 space-y-1">
             <li><strong>Academic & Task Management:</strong> Module scheduling, assignment priority calculation, exam countdown timers, and calendar integration.</li>
-            <li><strong>AI Study Assistance:</strong> Interactive study coaching, automated study plan synthesis, note summarization, and custom quiz generation powered by Google Gemini AI.</li>
+            <li><strong>AI Study Assistance:</strong> Automated study plan synthesis and custom quiz generation powered by Google Gemini AI.</li>
             <li><strong>Productivity & Focus Tools:</strong> Pomodoro focus timers, habit trackers, ambient soundscapes, and gamification rewards (XP, streaks, badges).</li>
-            <li><strong>Student Budget Tracking:</strong> Income, allowance, and expense tracking tailored for student finance management.</li>
           </ul>
         </section>
 
@@ -84,7 +83,7 @@ export function TermsPage() {
           <h2 className="text-xl font-semibold mb-2">6. User Content & Intellectual Property</h2>
           <ul className="list-disc pl-6 space-y-2">
             <li>
-              <strong>Your Ownership:</strong> You retain full ownership of all study materials, documents, assignment details, budget logs, and text uploaded to StudentOS ("User Content").
+              <strong>Your Ownership:</strong> You retain full ownership of all study materials, documents, assignment details, and text uploaded to StudentOS ("User Content"). Upload only material you are entitled to use for your own study, such as lecture slides your course provides to you; your study files are private to your account and are not shared with other users.
             </li>
             <li>
               <strong>License to Platform:</strong> You grant StudentOS a non-exclusive, worldwide, royalty-free license to store, transmit, format, and display your User Content solely to deliver and operate the Services for you.

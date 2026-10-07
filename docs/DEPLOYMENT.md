@@ -10,7 +10,7 @@ production setup.
 - A Vercel account.
 - A Paystack account (test mode first). Paystack is the live processor —
   Stripe does not support South African businesses, and plans are priced in ZAR.
-- A Google Gemini API key (for the AI coach and Smart Plan notes) — create one
+- A Google Gemini API key (for Smart Plan notes and quiz generation) — create one
   in [Google AI Studio](https://aistudio.google.com/apikey) and make sure the
   Generative Language API is enabled for the project.
 - The Supabase CLI. It is pinned as a devDependency, so `npm install` is all
@@ -37,6 +37,73 @@ Migrations create:
   buckets with owner-scoped policies.
 - `00012_note_images.sql` — the private `note-images` bucket for images pasted
   into notes (PNG, JPEG, WebP and GIF, up to 5 MB each).
+- `00014_quiz_engine.sql` — quizzes, server-graded attempts and the XP ledger;
+  scores and XP are writable only by the `quiz-grade` function.
+- `00015_quiz_questions_invoker.sql` — hides quiz answer keys with column
+  privileges and a view that runs as the caller (clears the advisor's
+  "Security Definer View" warning).
+- `00016_xp_integrity.sql` — XP, levels, streaks and badges become
+  server-owned. The client reports activity through `record_activity` and asks
+  for badges through `unlock_badge`; quiz questions are written only by
+  `quiz-generate`. See "XP integrity" in docs/SECURITY.md.
+- `00017_quests.sql` — weekly quests: the catalogue, the rotation, progress
+  counted from server-written rows, and `claim_quest`.
+- `00018_study_resources.sql` — quizzes from the student's own files: the
+  private `study-resources` bucket (PDFs and photos, 20 MB), the study library,
+  background generation jobs, and the AI meter that enforces the monthly quiz
+  allowance (Free 3, Pro 40, Elite 150) and 20 file readings a day.
+- `00019_reward_accuracy.sql` — rewards say what they pay: the weekly XP quest
+  reads as a goal ("Reach 150 XP this week", with a 50 XP bonus), the quest and
+  badge catalogues are re-seeded so their text can be corrected, and Early Bird
+  can finally be earned — the database stamps `assignments.submitted_at`
+  itself. Assignments submitted before it have no stamp and do not count.
+- `00020_squads.sql` — squads of 3 to 6. The tables are closed to clients; every
+  read and write is a function (`my_squad`, `squad_board`, `create_squad`,
+  `join_squad`, …). Squad mates see a handle, weekly XP, streak and quest ticks,
+  all computed by the database. See "Squads" in docs/SECURITY.md.
+
+### Rolling out 00016 to 00020
+
+00016 changes what the browser may write, so the order matters. Run the three
+steps back to back:
+
+```bash
+npm run functions:deploy          # 1. quiz-grade now also moves the streak
+npx supabase functions delete ai-chat   #    (retired in Phase 2, if still deployed)
+#                                   2. deploy the frontend (section 5)
+npm run db:push                   # 3. applies whatever is pending, in order (00016–00020)
+```
+
+- 00019 has no ordering constraint: before it, the server refuses Early Bird
+  (no rule yet) and pays nothing; after it, an old bundle simply never asks.
+- Until 00020 is applied, the Squad page says the squad could not be loaded
+  (its functions don't exist yet); nothing else is affected.
+
+- Until 00018 is applied, quiz-generate and resource-outline fail to start
+  (their metering functions don't exist yet) and say so; nothing is charged.
+
+- Between 1 and 3, quiz-grade's streak call fails and is logged; the grade
+  itself still records. Between 2 and 3, new clients' activity reports fail
+  quietly — tasks and sessions save, but pay no XP and move no streak.
+- After 3, a tab still running the old bundle is refused when it tries to
+  write XP or a streak (`XP001`); the task or session it was saving is kept.
+  Reloading the page fixes it.
+
+### Apply migrations with `db push`, not the SQL Editor
+
+Pasting a migration into the SQL Editor creates its objects but records
+nothing in the migration history, so the next `db push` runs it again. Every
+migration from `00012` on is written to survive that — policies are dropped
+before they are recreated, tables and indexes use `if not exists`, one-time
+data fixes check whether they already ran — and
+`src/lib/__tests__/migrations-idempotent.test.ts` fails if a new one is not.
+
+If a push fails, the CLI prints only the statement. To see Postgres's reason:
+
+```bash
+npx supabase db push --debug     # the flag goes on the same command
+npx supabase migration list      # compare local and remote history
+```
 
 ### Promote an admin
 
@@ -113,14 +180,25 @@ npx supabase secrets set \
 npm run functions:deploy
 
 # …or individually:
-npx supabase functions deploy ai-chat            # JWT-verified (Pro-gated)
 npx supabase functions deploy ai-plan            # JWT-verified (Pro-gated)
+npx supabase functions deploy quiz-generate      # JWT-verified (all plans, monthly allowance)
+npx supabase functions deploy quiz-grade         # JWT-verified (all plans)
+npx supabase functions deploy resource-outline   # JWT-verified (all plans, 20 a day)
 npx supabase functions deploy paystack           # JWT-verified
 npx supabase functions deploy paystack-webhook --no-verify-jwt
 npx supabase functions deploy send-reminders --no-verify-jwt
 ```
 
 `supabase/config.toml` declares the daily cron schedule for `send-reminders`.
+
+> [!IMPORTANT]
+> **Use a paid-tier Gemini API key.** Students' notes and lecture files are sent
+> to Gemini. On the unpaid tier Google may use what is submitted to improve its
+> products, human reviewers may read it, and its terms ask that personal
+> information not be sent there; on the paid tier it is not used for training.
+> Google's terms also restrict using the Gemini API in services "directed
+> towards or … likely to be accessed by individuals under the age of 18" —
+> check your Terms of Service and sign-up flow against that clause.
 
 > [!IMPORTANT]
 > **CRON_SECRET Enforcement & Rotation:**
@@ -192,7 +270,17 @@ Add a rewrite so client-side routes resolve (`vercel.json`):
   and that the webhook has written `subscriptions` with a `SUB_…` code.
 - Cancel from "Manage subscription"; confirm access runs to the end of the paid
   period rather than stopping immediately.
-- Hit the AI coach (Pro) and confirm it responds and never invents deadlines.
+- Generate a Smart Plan (Pro) and confirm it never invents deadlines.
+- Tick a task: XP rises by 3 and the streak counts today. Un-tick and re-tick
+  it: no more XP. In the SQL editor, `select event, source_id, amount from
+  xp_ledger order by created_at desc limit 5` shows one row for that task.
+- Take a quiz: the first pass pays, a re-take pays nothing but is still scored.
+- The dashboard shows three quests. Finish one and claim it: XP rises by its
+  reward once, and a second claim pays nothing.
+- Upload a lecture PDF on the Quizzes page: it shows "Reading…", then its
+  topics. Pick two topics and write a 10-question quiz: the job moves through
+  reading → writing → checking, and each explanation names a page. On Free, the
+  fourth quiz in a month is refused with the upgrade sentence.
 
 ## Environments
 

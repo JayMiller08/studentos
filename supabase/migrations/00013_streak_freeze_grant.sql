@@ -11,17 +11,34 @@
 --
 -- So: new profiles start with one, and existing profiles are topped up to one.
 --
--- The schema change is idempotent. The top-up is a one-time correction, and
--- re-running it would hand a freeze back to someone who had spent theirs —
--- a far smaller wrong than leaving students unprotected after telling them
--- they were covered.
+-- Idempotent, including the top-up. The top-up is a one-time correction:
+-- re-running it would hand a freeze back to every student who has spent theirs
+-- since. That is not hypothetical — a migration run by hand in the SQL Editor
+-- leaves no row in the migration history, so `db push` runs it again later.
+-- The default this migration sets is its own receipt: if the column already
+-- defaults to 1, the top-up has been done and is skipped.
 --
 -- Earning is unchanged: one more for every 7 days in a row, at most 2 held.
 -- ============================================================================
 
+do $$
+begin
+  -- Checked before the default changes below, so this sees 00011's default
+  -- (0) on the first run and this migration's own (1) on any later one.
+  if coalesce(
+    (select column_default
+       from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'profiles'
+        and column_name = 'streak_freezes'),
+    ''
+  ) <> '1' then
+    update public.profiles
+      set streak_freezes = 1
+      where streak_freezes < 1;
+  end if;
+end;
+$$;
+
 alter table public.profiles
   alter column streak_freezes set default 1;
-
-update public.profiles
-  set streak_freezes = 1
-  where streak_freezes < 1;

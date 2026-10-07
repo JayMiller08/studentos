@@ -2,6 +2,7 @@ import { useAuth } from '@/app/providers/auth-provider'
 import {
   type CountedResource,
   type PlanDefinition,
+  type PlanFeature,
   type PlanLimits,
   PLANS,
   remainingQuota,
@@ -22,7 +23,7 @@ export interface CurrentPlan {
   definition: PlanDefinition
   limits: PlanLimits
   /** True when the plan includes a boolean feature such as `aiPlanner`. */
-  has: (feature: keyof Omit<PlanLimits, CountedResource>) => boolean
+  has: (feature: PlanFeature) => boolean
   /** Usage against a metered resource, given how many the user already has. */
   quota: (resource: CountedResource, used: number) => QuotaUsage
 }

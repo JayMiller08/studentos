@@ -1,20 +1,21 @@
 import {
   BarChart3,
   BookOpen,
-  Bot,
+  BrainCircuit,
   CalendarDays,
   CreditCard,
   LayoutDashboard,
   ListTodo,
   type LucideIcon,
   NotebookPen,
-  PiggyBank,
   Settings,
   Shield,
   Sparkles,
+  Target,
   Timer,
   Trophy,
   Repeat,
+  Users,
 } from 'lucide-react'
 import type { Role } from '@/types/models'
 
@@ -54,8 +55,8 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Intelligence',
     items: [
+      { to: '/app/quiz', label: 'Quizzes', icon: BrainCircuit },
       { to: '/app/smart-plan', label: 'Smart Plan', icon: Sparkles },
-      { to: '/app/coach', label: 'AI Coach', icon: Bot },
       { to: '/app/analytics', label: 'Analytics', icon: BarChart3 },
     ],
   },
@@ -63,8 +64,11 @@ export const NAV_SECTIONS: NavSection[] = [
     label: 'Life',
     items: [
       { to: '/app/habits', label: 'Habits', icon: Repeat },
-      { to: '/app/budget', label: 'Budget', icon: PiggyBank },
       { to: '/app/notes', label: 'Notes', icon: NotebookPen },
+      { to: '/app/quests', label: 'Quests', icon: Target },
+      // Not on the phone's bottom bar, which is full: reached from the
+      // dashboard tile and from this menu, which the header opens on a phone.
+      { to: '/app/squad', label: 'Squad', icon: Users },
       { to: '/app/achievements', label: 'Achievements', icon: Trophy },
     ],
   },
@@ -91,6 +95,9 @@ export const MOBILE_NAV_ITEMS: NavItem[] = [
   { to: '/app', label: 'Home', icon: LayoutDashboard, end: true },
   { to: '/app/planner', label: 'Planner', icon: ListTodo },
   { to: '/app/assignments', label: 'Work', icon: BookOpen },
-  { to: '/app/focus', label: 'Focus', icon: Timer },
+  // Focus used to hold this slot. It is reachable in one tap from the
+  // dashboard's priority card and from every assignment; a quiz has no other
+  // entry point, and the whole revamp rests on students taking them.
+  { to: '/app/quiz', label: 'Quizzes', icon: BrainCircuit },
   { to: '/app/settings', label: 'More', icon: Settings },
 ]

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react'
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { useAuth } from '@/app/providers/auth-provider'
+import { Aurora } from '@/components/aurora'
 import { Logo } from '@/components/logo'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -120,7 +121,10 @@ export function OnboardingPage() {
   const timezones = React.useMemo(timezoneOptions, [])
 
   return (
-    <div className="bg-background flex min-h-dvh flex-col">
+    // `isolate` keeps the aurora's negative z-index inside this page instead of
+    // behind the body's own backdrop.
+    <div className="relative isolate flex min-h-dvh flex-col">
+      <Aurora />
       <header className="flex h-16 items-center justify-center">
         <Logo />
       </header>
@@ -134,10 +138,10 @@ export function OnboardingPage() {
                 className={cn(
                   'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors',
                   index < step
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'bg-primary-strong text-primary-foreground'
                     : index === step
-                      ? 'bg-primary text-primary-foreground ring-primary/25 ring-4'
-                      : 'bg-muted text-muted-foreground',
+                      ? 'bg-primary-strong text-primary-foreground ring-primary/25 shadow-[0_0_16px_var(--glow-primary)] ring-4'
+                      : 'bg-muted text-muted-foreground border',
                 )}
                 aria-hidden
               >
@@ -163,9 +167,9 @@ export function OnboardingPage() {
           transition={{ duration: 0.2, ease: 'easeOut' }}
         >
           {step === 0 ? (
-            <Card>
+            <Card className="shadow-e3">
               <CardContent className="pt-1">
-                <h1 className="mb-1 text-xl font-semibold">Tell us about you</h1>
+                <h1 className="mb-1 text-2xl font-semibold tracking-tight">Tell us about you</h1>
                 <p className="text-muted-foreground mb-5 text-sm">
                   This personalizes your dashboard and schedule.
                 </p>
@@ -235,9 +239,9 @@ export function OnboardingPage() {
           ) : null}
 
           {step === 1 ? (
-            <Card>
+            <Card className="shadow-e3">
               <CardContent className="pt-1">
-                <h1 className="mb-1 text-xl font-semibold">Your studies</h1>
+                <h1 className="mb-1 text-2xl font-semibold tracking-tight">Your studies</h1>
                 <p className="text-muted-foreground mb-5 text-sm">
                   Deadlines and reminders use your timezone.
                 </p>
@@ -302,9 +306,9 @@ export function OnboardingPage() {
           ) : null}
 
           {step === 2 ? (
-            <Card>
+            <Card className="shadow-e3">
               <CardContent className="pt-1">
-                <h1 className="mb-1 text-xl font-semibold">What are your goals?</h1>
+                <h1 className="mb-1 text-2xl font-semibold tracking-tight">What are your goals?</h1>
                 <p className="text-muted-foreground mb-5 text-sm">
                   Choose 1 to {MAX_GOALS}. You can change these anytime in settings.
                 </p>

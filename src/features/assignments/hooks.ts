@@ -62,9 +62,9 @@ export function useCreateAssignment() {
   return useMutation({
     mutationFn: (input: AssignmentInput) =>
       assignmentsService.create(user!.id, profile?.plan ?? 'free', input),
-    onSuccess: () => {
+    onSuccess: (assignment) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.assignments(user!.id) })
-      void awardXp('assignment_created')
+      void awardXp('assignment_created', assignment.id)
     },
   })
 }
@@ -96,8 +96,8 @@ export function useUpdateAssignment() {
         queryClient.setQueryData(queryKeys.assignments(user!.id), context.previous)
       }
     },
-    onSuccess: (_data, _vars, context) => {
-      if (context?.justSubmitted) void awardXp('assignment_submitted')
+    onSuccess: (_data, { id }, context) => {
+      if (context?.justSubmitted) void awardXp('assignment_submitted', id)
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.assignments(user!.id) })

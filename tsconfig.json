@@ -3,5 +3,16 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
-  ]
+  ],
+  /* Compiles nothing itself ("files": []) — this is the solution file. The
+     alias is repeated here only so tooling that reads the root tsconfig can
+     resolve it: `npx shadcn add` otherwise writes components to a literal "@"
+     directory instead of src/components. The real one lives in
+     tsconfig.app.json, and the two must stay in step. */
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
 }

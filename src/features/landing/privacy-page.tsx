@@ -35,7 +35,8 @@ export function PrivacyPage() {
           <ul className="list-disc pl-6 space-y-1">
             <li><strong>Personally Identifiable Information (PII):</strong> Full name, email address, profile avatar, institution name, and account credentials.</li>
             <li><strong>Academic Records & Study Content:</strong> Enrolled courses, subject modules, assignment titles, deadlines, study notes, quiz responses, exam dates, priority scores, and uploaded study attachments (e.g. PDFs, documents, images).</li>
-            <li><strong>Financial & Budget Data:</strong> Student income records, monthly allowance amounts, spending entries, budget categories, and subscription billing history.</li>
+            <li><strong>Squads (optional):</strong> If you join or start a squad, the handle you choose for it, which squad you are in and your role in it. Other members of your squad see only that handle, the XP you earned this week, your current streak and how many of this week's quests you have claimed — never your name, email, institution, modules, grades, notes or files.</li>
+            <li><strong>Billing Data:</strong> Subscription billing history and payment status.</li>
             <li><strong>Technical & Usage Information:</strong> IP address, device type, browser specifications, login activity, system logs, and session cookies.</li>
           </ul>
         </section>
@@ -45,7 +46,7 @@ export function PrivacyPage() {
           <p>In accordance with Section 11 of POPIA, we process your personal information based on your explicit consent, performance of our contract with you, and our legitimate operational interests to:</p>
           <ul className="list-disc pl-6 space-y-1">
             <li>Provision, personalize, and maintain your StudentOS account and study dashboard.</li>
-            <li>Enable AI-driven features, including study coaching, automated schedule synthesis, summary generation, and quiz creation.</li>
+            <li>Enable AI-driven features, including automated schedule synthesis and quiz generation.</li>
             <li>Process subscription upgrades, renewals, and merchant transactions via our payment processor.</li>
             <li>Send essential account notifications, security alerts, and study reminders.</li>
             <li>Comply with South African statutory, accounting, and regulatory obligations.</li>
@@ -57,10 +58,10 @@ export function PrivacyPage() {
           <p>We engage trusted third-party service providers ("Operators" under POPIA) to support platform infrastructure, payment processing, and artificial intelligence capabilities:</p>
           <ul className="list-disc pl-6 space-y-2">
             <li>
-              <strong>Supabase Inc.:</strong> Cloud database, user authentication, and secure attachment storage provider. Stores application state, user profiles, and encrypted database records.
+              <strong>Supabase Inc.:</strong> Cloud database, user authentication, and secure attachment storage provider. Stores application state, user profiles, encrypted database records, and the study files you upload (lecture PDFs and photos of notes), which are private to your account and deleted when you delete them.
             </li>
             <li>
-              <strong>Google LLC (Google Gemini AI):</strong> Provider of natural language processing and artificial intelligence models for study coaching, note synthesis, and assignment planning.
+              <strong>Google LLC (Google Gemini AI):</strong> Provider of the artificial intelligence models that read the notes and study files you choose to be quizzed on, write and check quiz questions from them, and add notes to your study plans. A file is sent for processing only when you add it to your library or ask for a quiz from it, and the copy made for processing is deleted from Google's side once the work is done.
             </li>
             <li>
               <strong>Paystack Payments Limited:</strong> Authorized payment gateway operator processing recurring South African Rand (ZAR) subscription billing and credit/debit card transactions. Card details are processed directly by Paystack under PCI-DSS compliance and are never stored on StudentOS servers.
@@ -94,7 +95,7 @@ export function PrivacyPage() {
             <li>You may submit a formal deletion or correction request by emailing our Information Officer at <a href="mailto:support@studentos.app" className="underline">support@studentos.app</a>.</li>
           </ul>
           <p>
-            Upon receipt of a verified deletion request, we will permanently purge your user profile, academic records, budget logs, and associated cloud attachments within 30 days, save for records required to be retained by law.
+            Upon receipt of a verified deletion request, we will permanently purge your user profile, academic records, and associated cloud attachments within 30 days, save for records required to be retained by law.
           </p>
         </section>
 

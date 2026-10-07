@@ -3,7 +3,9 @@ import {
   DbError,
   friendlyDbErrorMessage,
   isPlanLimitError,
+  isSquadFullError,
   isUniqueViolation,
+  SQUAD_FULL,
 } from '@/services/db'
 
 describe('isUniqueViolation', () => {
@@ -70,5 +72,12 @@ describe('friendlyDbErrorMessage', () => {
   it('does not mistake other database errors for a plan limit', () => {
     expect(isPlanLimitError(new DbError('notes', 'insert', 'boom', '23505'))).toBe(false)
     expect(isPlanLimitError(new Error('boom'))).toBe(false)
+  })
+
+  it('shows the full-squad sentence verbatim (SQ001, migration 00020)', () => {
+    const error = new DbError('join_squad', 'rpc', 'That squad is full (6 of 6).', SQUAD_FULL)
+    expect(isSquadFullError(error)).toBe(true)
+    expect(friendlyDbErrorMessage(error)).toBe('That squad is full (6 of 6).')
+    expect(isSquadFullError(new DbError('join_squad', 'rpc', 'boom', '22023'))).toBe(false)
   })
 })

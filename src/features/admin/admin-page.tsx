@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
-import { DollarSign, Flag, Megaphone, Trash2, UserCheck, Users } from 'lucide-react'
+import { DollarSign, Flag, LifeBuoy, Megaphone, Send, ToggleRight, Trash2, UserCheck, Users } from 'lucide-react'
 import * as React from 'react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/page-header'
@@ -22,7 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { StatTile } from '@/components/ui/stat-tile'
 import { Switch } from '@/components/ui/switch'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { formatCurrency, getInitials } from '@/lib/utils'
@@ -54,13 +56,7 @@ function MetricsRow() {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {cards.map((card) => (
-        <Card key={card.label} className="gap-1 py-4">
-          <CardContent className="space-y-1">
-            <card.icon aria-hidden className="text-primary size-4" />
-            <p className="text-2xl font-semibold">{card.value}</p>
-            <p className="text-muted-foreground text-xs">{card.label}</p>
-          </CardContent>
-        </Card>
+        <StatTile key={card.label} icon={card.icon} label={card.label} value={card.value} />
       ))}
     </div>
   )
@@ -95,7 +91,9 @@ function UsersTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Users</CardTitle>
+        <CardTitle className="flex items-center gap-2.5 text-base">
+          <Users aria-hidden className="text-primary" /> Users
+        </CardTitle>
         <CardDescription>{users.length} total</CardDescription>
         <Input
           value={search}
@@ -105,20 +103,20 @@ function UsersTab() {
           aria-label="Search users"
         />
       </CardHeader>
-      <CardContent className="overflow-x-auto">
-        <table className="w-full min-w-150 text-sm">
-          <thead>
-            <tr className="text-muted-foreground border-b text-left text-xs">
-              <th className="pb-2 font-medium">User</th>
-              <th className="pb-2 font-medium">Joined</th>
-              <th className="pb-2 font-medium">Role</th>
-              <th className="pb-2 font-medium">Plan</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
+      <CardContent className="px-0">
+        <Table className="min-w-150">
+          <TableHeader>
+            <TableRow>
+              <TableHead>User</TableHead>
+              <TableHead>Joined</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Plan</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {filtered.slice(0, 100).map((user) => (
-              <tr key={user.id}>
-                <td className="py-2.5">
+              <TableRow key={user.id}>
+                <TableCell>
                   <div className="flex items-center gap-2.5">
                     <span className="bg-secondary text-secondary-foreground flex size-8 items-center justify-center rounded-full text-xs font-medium">
                       {getInitials(user.full_name ?? user.email)}
@@ -128,18 +126,18 @@ function UsersTab() {
                       <p className="text-muted-foreground truncate text-xs">{user.email}</p>
                     </div>
                   </div>
-                </td>
-                <td className="text-muted-foreground py-2.5 text-xs">
+                </TableCell>
+                <TableCell className="text-muted-foreground text-xs">
                   {format(parseISO(user.created_at), 'd MMM yyyy')}
-                </td>
-                <td className="py-2.5">
+                </TableCell>
+                <TableCell>
                   {user.role === 'admin' ? (
                     <Badge variant="default">Admin</Badge>
                   ) : (
                     <Badge variant="muted">Student</Badge>
                   )}
-                </td>
-                <td className="py-2.5">
+                </TableCell>
+                <TableCell>
                   <Select
                     value={user.plan}
                     onValueChange={(value) => setPlan.mutate({ id: user.id, plan: value as Plan })}
@@ -153,11 +151,11 @@ function UsersTab() {
                       <SelectItem value="elite">Elite</SelectItem>
                     </SelectContent>
                   </Select>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         {filtered.length === 0 ? (
           <p className="text-muted-foreground py-8 text-center text-sm">No users match your search.</p>
         ) : null}
@@ -184,7 +182,9 @@ function FlagsTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Feature flags</CardTitle>
+        <CardTitle className="flex items-center gap-2.5 text-base">
+          <ToggleRight aria-hidden className="text-primary" /> Feature flags
+        </CardTitle>
         <CardDescription>Roll features out or back without a deploy</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -247,7 +247,9 @@ function AnnouncementsTab() {
     <div className="grid gap-4 lg:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">New announcement</CardTitle>
+          <CardTitle className="flex items-center gap-2.5 text-base">
+            <Megaphone aria-hidden className="text-primary" /> New announcement
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1.5">
@@ -282,7 +284,9 @@ function AnnouncementsTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Published</CardTitle>
+          <CardTitle className="flex items-center gap-2.5 text-base">
+            <Send aria-hidden className="text-primary" /> Published
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {announcements.length === 0 ? (
@@ -342,7 +346,9 @@ function TicketsTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Support tickets</CardTitle>
+        <CardTitle className="flex items-center gap-2.5 text-base">
+          <LifeBuoy aria-hidden className="text-primary" /> Support tickets
+        </CardTitle>
         <CardDescription>{tickets.filter((t) => t.status !== 'resolved').length} open</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">

@@ -29,7 +29,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     target: ['[data-tour="nav"]', '[data-tour="mobile-nav"]'],
     title: 'Everything lives here',
-    body: 'Planner, calendar, focus timer, AI coach, habits, budget and notes — reach any tool from here. Explore one area at a time; you don’t need it all at once.',
+    body: 'Planner, calendar, focus timer, quizzes, habits, notes and your squad — reach any tool from here. Explore one area at a time; you don’t need it all at once.',
   },
   {
     target: '[data-tour="topbar"]',

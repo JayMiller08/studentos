@@ -66,7 +66,7 @@ TanStack Query keys registered in `lib/query-keys.ts`.
 | Concern | Interface | Implementations |
 |---------|-----------|-----------------|
 | Auth | `auth-service.ts` | Supabase Auth · demo (simulated) |
-| AI | `ai-service.ts` | `ai-chat` edge function · rule-based offline coach |
+| AI | `ai-service.ts` | `ai-plan` edge function · rule-based planner fallback |
 | Payments | `services/billing/provider.ts` | `PaystackProvider` (live) · `MockProvider` (demo) · `StripeProvider` (dormant — not imported) |
 
 Choosing an implementation happens in exactly one place per concern (e.g.
@@ -78,9 +78,11 @@ Choosing an implementation happens in exactly one place per concern (e.g.
   transparent, explainable factor blend; stress level shifts the weighting.
 - **`study-planner.ts`** — earliest-deadline-first scheduling into
   capacity-limited 25–90-minute focus blocks; never schedules past a deadline.
-- **`focus-service.ts`** — study-time buckets, and persisting the daily streak. The streak rules themselves (continue, cover a single missed day with a freeze, or restart) are pure functions in `lib/streak.ts`.
-- **`gamification-service.ts`** — XP → level curve and badge conditions.
-- **`budget-service.ts` / `habits-service.ts`** — summaries, projections, streaks.
+- **`focus-service.ts`** — study-time buckets and logging sessions. The daily streak is advanced by the database (`touch_streak`, reached through `record_activity` and quiz grading, migration 00016); its rules (continue, cover a single missed day with a freeze, or restart) are pure functions in `lib/streak.ts`, which the SQL ports and demo mode runs.
+- **`gamification-service.ts`** — XP → level curve, what each activity pays, badge conditions, and recording progress: the client *reports* an activity or asks for a badge (`record_activity` / `unlock_badge` RPCs) and the database decides what it is worth. Demo mode runs a local twin of each function with the same rules.
+- **`resource-service.ts`** — the study library: uploads PDFs and photos to the private `study-resources` bucket and asks `resource-outline` to read them. Quizzes are written from a file, a note or text by the `quiz-generate` function as a background job (`quiz_generations`); `quiz-service.ts` starts it and follows it. Demo mode reads a PDF's text in the browser (`lib/pdf-text.ts`, pdf.js, lazy-loaded) and builds the quiz on-device.
+- **`quest-service.ts`** — the weekly quest board and claims, read from `quest_board()` / `claim_quest()`; the catalogue, rotation and progress rules live in `lib/quests.ts`, which demo mode runs and the SQL mirrors.
+- **`habits-service.ts`** — cadences, completion rates, streaks.
 
 These have no React or network dependencies and are unit-tested with Vitest.
 

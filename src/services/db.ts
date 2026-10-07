@@ -41,6 +41,19 @@ const UNIQUE_VIOLATION = '23505'
  */
 const PLAN_LIMIT = 'PL001'
 
+/**
+ * Raised by the `profiles_guard_progress` trigger (migration 00016) when a
+ * client write names XP, level or a streak field. Those change only through
+ * `record_activity`, `unlock_badge` and quiz grading.
+ */
+export const PROGRESS_LOCKED = 'XP001'
+
+/**
+ * Raised by the `squad_members_enforce_size` trigger (migration 00020) when a
+ * squad already has six members. The sentence is the student's to read.
+ */
+export const SQUAD_FULL = 'SQ001'
+
 export function isUniqueViolation(error: unknown): boolean {
   return error instanceof DbError && error.code === UNIQUE_VIOLATION
 }
@@ -48,6 +61,16 @@ export function isUniqueViolation(error: unknown): boolean {
 /** True when the database refused a write because the plan's cap was reached. */
 export function isPlanLimitError(error: unknown): boolean {
   return error instanceof DbError && error.code === PLAN_LIMIT
+}
+
+/** True when a write tried to set progress the server owns. */
+export function isProgressLockedError(error: unknown): boolean {
+  return error instanceof DbError && error.code === PROGRESS_LOCKED
+}
+
+/** True when a squad had no room left. */
+export function isSquadFullError(error: unknown): boolean {
+  return error instanceof DbError && error.code === SQUAD_FULL
 }
 
 /**
@@ -59,9 +82,11 @@ export function isPlanLimitError(error: unknown): boolean {
  */
 export function friendlyDbErrorMessage(error: unknown): string {
   if (isUniqueViolation(error)) return "That's already saved — no changes needed."
-  // The plan-limit trigger raises a sentence written for the student, so it is
-  // the one database message worth showing verbatim.
-  if (isPlanLimitError(error)) return (error as DbError).detail
+  // The plan-limit, progress and squad-size triggers raise sentences written
+  // for the student, so they are the database messages worth showing verbatim.
+  if (isPlanLimitError(error) || isProgressLockedError(error) || isSquadFullError(error)) {
+    return (error as DbError).detail
+  }
   if (error instanceof DbError) return 'Something went wrong saving your changes. Please try again.'
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.'
 }
@@ -74,6 +99,15 @@ export interface TableClient<Row extends Identifiable> {
   list(options?: ListOptions): Promise<Row[]>
   get(id: string): Promise<Row | null>
   insert(values: Record<string, unknown>): Promise<Row>
+  /**
+   * Insert rows without reading them back.
+   *
+   * `insert` asks PostgREST for the inserted row, and RETURNING needs SELECT
+   * permission, which a table such as `quiz_questions` (answer key unreadable)
+   * withholds. Since 00016 no client may write questions at all — only
+   * quiz-generate does — so today this serves demo mode's local quizzes.
+   */
+  insertMany(rows: Record<string, unknown>[]): Promise<void>
   upsert(values: Record<string, unknown> & { id: string }): Promise<Row>
   update(id: string, patch: Record<string, unknown>): Promise<Row>
   remove(id: string): Promise<void>
@@ -154,6 +188,14 @@ function supabaseTable<Row extends Identifiable>(tableName: string): TableClient
       return data as Row
     },
 
+    async insertMany(rows) {
+      if (rows.length === 0) return
+      // No `.select()`: supabase-js then sends `Prefer: return=minimal`, which
+      // is what keeps this working on a table the caller may not read.
+      const { error } = await client.from(tableName).insert(rows)
+      if (error) throw new DbError(tableName, 'insertMany', error.message, error.code)
+    },
+
     async upsert(values) {
       const { data, error } = await client.from(tableName).upsert(values).select().single()
       if (error) throw new DbError(tableName, 'upsert', error.message, error.code)
@@ -194,6 +236,9 @@ function localTable<Row extends Identifiable>(tableName: string): TableClient<Ro
     list: async (options) => localDb.list<LocalRow>(tableName, options),
     get: async (id) => localDb.get<LocalRow>(tableName, id),
     insert: async (values) => localDb.insert<LocalRow>(tableName, values),
+    insertMany: async (rows) => {
+      for (const row of rows) localDb.insert<LocalRow>(tableName, row)
+    },
     upsert: async (values) => localDb.upsert<LocalRow>(tableName, values),
     update: async (id, patch) => localDb.update<LocalRow>(tableName, id, patch),
     remove: async (id) => {
@@ -215,6 +260,7 @@ function guarded<Row extends Identifiable>(client: TableClient<Row>): TableClien
     list: (options) => requestGuard.run(() => client.list(options)),
     get: (id) => requestGuard.run(() => client.get(id)),
     insert: (values) => requestGuard.run(() => client.insert(values)),
+    insertMany: (rows) => requestGuard.run(() => client.insertMany(rows)),
     upsert: (values) => requestGuard.run(() => client.upsert(values)),
     update: (id, patch) => requestGuard.run(() => client.update(id, patch)),
     remove: (id) => requestGuard.run(() => client.remove(id)),
@@ -226,6 +272,25 @@ export function table<Row extends Identifiable>(tableName: string): TableClient<
   // Demo mode reads localStorage — no network to protect, and queuing it would
   // only make the offline experience feel worse.
   return supabase ? guarded(supabaseTable<Row>(tableName)) : localTable<Row>(tableName)
+}
+
+/**
+ * Call a Postgres function through PostgREST, e.g. `record_activity`.
+ *
+ * Supabase only: demo mode has no database to run functions in, so callers
+ * keep a local twin and choose between the two themselves, as quiz grading
+ * already does. Always resolves to rows — a function that `returns table`
+ * comes back as an array, a scalar one as a single value, which is wrapped.
+ */
+export async function rpc<Row>(name: string, args: Record<string, unknown>): Promise<Row[]> {
+  const client = supabase
+  if (!client) throw new Error(`rpc("${name}") needs a Supabase project; demo mode must use its local twin.`)
+  return requestGuard.run(async () => {
+    const { data, error } = await client.rpc(name, args)
+    if (error) throw new DbError(name, 'rpc', error.message, error.code)
+    if (data === null || data === undefined) return []
+    return (Array.isArray(data) ? data : [data]) as Row[]
+  })
 }
 
 /** Convenience: filter rows to the signed-in user. Supabase RLS enforces this
