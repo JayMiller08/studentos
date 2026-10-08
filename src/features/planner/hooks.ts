@@ -1,11 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/app/providers/auth-provider'
-import { announceStreak } from '@/features/gamification/announce-streak'
 import { useAwardXp } from '@/hooks/use-award-xp'
 import { useRealtimeTable } from '@/hooks/use-realtime'
 import { queryKeys } from '@/lib/query-keys'
 import { type TaskInput, tasksService } from '@/services/tasks-service'
-import { focusService } from '@/services/focus-service'
 import type { Task } from '@/types/models'
 
 export function useTasks() {
@@ -59,23 +57,12 @@ export function useUpdateTask() {
 }
 
 export function useToggleTask() {
-  const { user, profile, refreshProfile } = useAuth()
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const awardXp = useAwardXp()
   return useMutation({
-    mutationFn: async ({ task, completed }: { task: Task; completed: boolean }) => {
-      const updated = await tasksService.setCompleted(task, completed)
-      // Completing work counts toward the daily streak.
-      if (completed && profile) {
-        const advance = await focusService.touchDailyStreak(user!.id, profile)
-        announceStreak(advance)
-        // XP isn't awarded for re-ticking a task that was already done, so the
-        // refresh that normally follows it can't be relied on to show a streak
-        // or freeze that just changed.
-        if (advance) void refreshProfile()
-      }
-      return updated
-    },
+    mutationFn: ({ task, completed }: { task: Task; completed: boolean }) =>
+      tasksService.setCompleted(task, completed),
     onMutate: async ({ task, completed }) => {
       const key = queryKeys.tasks(user!.id)
       await queryClient.cancelQueries({ queryKey: key })
@@ -100,8 +87,11 @@ export function useToggleTask() {
       if (context?.previous) queryClient.setQueryData(queryKeys.tasks(user!.id), context.previous)
     },
     onSuccess: (_data, { task, completed }) => {
-      // Only reward the first completion, not un-checking then re-checking.
-      if (completed && task.status !== 'done') void awardXp('task_completed')
+      // Every completion is reported: it counts toward the daily streak, and
+      // the ledger — keyed on the task — pays only the first. Un-ticking and
+      // re-ticking used to pay again, because the old check could only see the
+      // task's status at that moment.
+      if (completed) void awardXp('task_completed', task.id)
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user!.id) })

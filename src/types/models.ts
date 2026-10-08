@@ -4,6 +4,8 @@
  * (In CI these can be cross-checked against `supabase gen types`.)
  */
 
+import type { StreakAdvance } from '@/lib/streak'
+
 // ── Shared primitives ────────────────────────────────────────────────────
 
 export interface BaseRow {
@@ -28,7 +30,6 @@ export interface NotificationPrefs {
   assignments: boolean
   exams: boolean
   habits: boolean
-  budget: boolean
   study_reminders: boolean
   email_digest: boolean
   push_enabled: boolean
@@ -38,7 +39,6 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   assignments: true,
   exams: true,
   habits: true,
-  budget: true,
   study_reminders: true,
   email_digest: false,
   push_enabled: false,
@@ -217,47 +217,8 @@ export interface HabitLog extends UserOwnedRow {
   count: number
 }
 
-// ── Budget ───────────────────────────────────────────────────────────────
-
-export type TransactionType = 'income' | 'expense'
-
-export const EXPENSE_CATEGORIES = [
-  'food',
-  'transport',
-  'housing',
-  'books',
-  'tuition',
-  'entertainment',
-  'health',
-  'subscriptions',
-  'other',
-] as const
-export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number]
-
-export interface Budget extends UserOwnedRow {
-  /** First day of the month, 'yyyy-MM-01'. */
-  month: string
-  currency: string
-  planned_income: number
-  spending_limit: number
-}
-
-export interface Transaction extends UserOwnedRow {
-  budget_month: string
-  type: TransactionType
-  amount: number
-  category: string
-  note: string | null
-  occurred_on: string
-}
-
-export interface Goal extends UserOwnedRow {
-  name: string
-  target_amount: number
-  saved_amount: number
-  deadline: string | null
-  achieved_at: string | null
-}
+// Budget was removed in the gamification revamp. The `budgets`, `transactions`
+// and `goals` tables are still in the database, unread, pending an export.
 
 // ── Notes ────────────────────────────────────────────────────────────────
 
@@ -332,17 +293,8 @@ export interface Subscription extends UserOwnedRow {
 
 // ── AI ───────────────────────────────────────────────────────────────────
 
-export interface AIConversation extends UserOwnedRow {
-  title: string
-  mode: 'coach' | 'quiz' | 'flashcards' | 'summary' | 'essay' | 'code'
-}
-
-export interface AIMessage extends BaseRow {
-  conversation_id: string
-  user_id: string
-  role: 'user' | 'assistant'
-  content: string
-}
+// The AI Coach chat was removed in the gamification revamp. Its
+// `ai_conversations` and `ai_messages` tables remain, unread, pending an export.
 
 /**
  * One scheduled stretch of work on a study plan. Produced by
@@ -398,6 +350,132 @@ export interface BadgeDef {
 export interface Achievement extends UserOwnedRow {
   badge_id: string
   unlocked_at: string
+}
+
+// ── Quizzes ──────────────────────────────────────────────────────────────
+
+export type QuizSource = 'ai' | 'note' | 'manual'
+export type QuizKind = 'practice' | 'boss'
+export type QuizDifficulty = 'easy' | 'mixed' | 'exam'
+
+export interface Quiz extends UserOwnedRow {
+  module_id: string | null
+  title: string
+  source: QuizSource
+  kind: QuizKind
+  question_count: number
+  /** The library file it was written from (migration 00018). */
+  resource_id?: string | null
+  /** The note it was written from (migration 00018). */
+  note_id?: string | null
+}
+
+// ── Study library (migration 00018) ──────────────────────────────────────
+
+export type StudyResourceKind = 'pdf' | 'photos'
+/** `uploaded` until resource-outline has read it. */
+export type StudyResourceStatus = 'uploaded' | 'reading' | 'ready' | 'failed'
+
+export interface OutlineTopic {
+  name: string
+  /** e.g. "3–7"; photo numbers for photos. */
+  pages: string | null
+  summary: string | null
+}
+
+/** A file in the student's study library: one PDF, or up to ten photos of notes. */
+export interface StudyResource extends UserOwnedRow {
+  module_id: string | null
+  title: string
+  kind: StudyResourceKind
+  /** `<user id>/<uuid>.<ext>` in the private study-resources bucket. */
+  storage_paths: string[]
+  size_bytes: number
+  status: StudyResourceStatus
+  page_count: number | null
+  outline: OutlineTopic[]
+  summary: string | null
+  error: string | null
+}
+
+export type QuizGenerationStatus = 'queued' | 'reading' | 'writing' | 'checking' | 'done' | 'failed'
+
+/** A quiz being written, in the background, by quiz-generate. */
+export interface QuizGeneration extends UserOwnedRow {
+  resource_id: string | null
+  note_id: string | null
+  title: string
+  status: QuizGenerationStatus
+  options: { count?: number; difficulty?: QuizDifficulty; kind?: QuizKind; topics?: string[] }
+  quiz_id: string | null
+  error: string | null
+}
+
+/** One AI call on the student's meter. Written only by Edge Functions. */
+export interface AiUsage extends UserOwnedRow {
+  kind: 'quiz' | 'outline'
+  source_id: string | null
+  /** False for a quiz that failed: it is not counted against the month. */
+  charged: boolean
+}
+
+/**
+ * A question as the runner sees it.
+ *
+ * Read from the `quiz_questions_public` view, which exists precisely because
+ * this shape has no `correct_index` and no `explanation`. The answer key is
+ * only ever returned by `quiz-grade`, after the attempt is submitted.
+ */
+export interface QuizQuestion {
+  id: string
+  quiz_id: string
+  ordinal: number
+  prompt: string
+  options: string[]
+  created_at: string
+}
+
+export interface QuizAttempt extends UserOwnedRow {
+  quiz_id: string
+  score: number
+  total: number
+  duration_seconds: number
+  xp_awarded: number
+  submitted_at: string
+}
+
+/** One question's outcome, as returned by the grading function. */
+export interface GradedAnswer {
+  questionId: string
+  chosenIndex: number | null
+  correctIndex: number
+  correct: boolean
+  explanation: string | null
+}
+
+export interface QuizResult {
+  attemptId: string
+  score: number
+  total: number
+  xpAwarded: number
+  totalXp: number | null
+  level: number | null
+  defeatedBoss: boolean
+  answers: GradedAnswer[]
+  /**
+   * What the attempt did to the daily streak — a quiz counts as studying.
+   * Null when the day was already counted; absent from a quiz-grade deployed
+   * before streaks moved server-side.
+   */
+  streak?: StreakAdvance | null
+}
+
+/** A row in the XP audit trail. Written only by `award_xp`. */
+export interface XpLedgerEntry extends BaseRow {
+  user_id: string
+  event: string
+  source_id: string
+  amount: number
 }
 
 // ── Analytics & admin ────────────────────────────────────────────────────

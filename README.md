@@ -1,7 +1,7 @@
 # StudentOS by Life OS
 
 **The operating system for university students.** StudentOS combines academic
-planning, focus, habits, budgeting and AI into one command center — and
+planning, focus, habits and AI into one command center — and
 actively tells students the single most important thing to do next, removing
 decision fatigue.
 
@@ -24,12 +24,12 @@ Built as a production-grade, venture-backed SaaS product designed to scale to
 | **Focus Center** | Reload-proof Pomodoro engine, deep-work mode, generated ambient sound, distraction counter, session history |
 | **Priority Engine** | Transparent factor model (urgency, weight, effort, difficulty, declared priority, momentum) → 0–100 score |
 | **Smart Plan** | Deterministic AI study-schedule generator, capacity-aware, one-tap apply into the planner, saved plans you can reopen, edit, rename or delete |
-| **AI Coach** | Chat with 6 modes (coach, quiz, flashcards, summary, essay, code), grounded in real deadlines; never invents dates |
 | **Analytics** | Productivity score, focus/pipeline charts, Pro-gated weekly trends |
 | **Habits** | Daily/weekly/monthly cadences, streaks, completion rates, 12-week heatmap |
-| **Budget** | Income/expense tracking, category breakdown, month-end projection & alerts, savings goals |
 | **Notes** | Rich text editor with formatting toolbar (Markdown source available), checklists, syntax-highlighted code blocks with line numbers, folders, tags, search, autosave, version history |
-| **Gamification** | XP, quadratic level curve, 13 badges, achievements |
+| **Quizzes** | Upload a lecture PDF or photos of your notes and get a quiz written from exactly that — topics, length and difficulty of your choosing, every question citing its page, checked twice by the AI, graded server-side against an answer key the browser never sees. 3 a month on Free, 40 on Pro |
+| **Quests** | Three weekly quests, the same for everyone — show up, prove it, keep moving — counted from verified activity and claimed for XP |
+| **Gamification** | XP earned from verified quiz answers and capped daily activity, quadratic level curve, 12 badges, streak freezes — all awarded by the database, never by the client |
 | **Billing** | Provider-abstracted (Paystack, ZAR) subscriptions, plan gating, self-serve management |
 | **Admin** | User/plan management, feature flags, announcements, support tickets |
 
@@ -97,7 +97,7 @@ src/
   components/     # shared components + ui/ (design-system primitives)
   features/       # one folder per product area (self-contained)
     auth/ onboarding/ dashboard/ planner/ assignments/ calendar/ focus/
-    ai/ analytics/ notifications/ habits/ budget/ notes/ gamification/
+    ai/ analytics/ notifications/ habits/ quiz/ notes/ gamification/
     billing/ admin/ landing/ settings/
   services/       # data + domain logic (db access, engines, providers)
   hooks/          # cross-feature hooks
@@ -106,7 +106,7 @@ src/
   styles/         # design tokens + globals
 supabase/
   migrations/     # normalized schema, triggers, RLS, storage policies
-  functions/      # edge functions: ai-chat, ai-plan, paystack, paystack-webhook,
+  functions/      # edge functions: ai-plan, quiz-generate, quiz-grade, paystack,
                   #                 send-reminders (+ dormant Stripe pair)
 ```
 
@@ -169,8 +169,8 @@ See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the full runbook. In short:
 ## 🧪 Testing
 
 Deterministic domain logic (priority engine, study planner, focus stats,
-recurrence, plan gating, gamification curve, budget math, habits, billing
-provider) is covered by Vitest:
+recurrence, plan gating, gamification curve, XP and streak rules, quiz
+grading, habits, billing provider) is covered by Vitest:
 
 ```bash
 npm run test

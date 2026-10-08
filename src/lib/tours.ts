@@ -1,3 +1,4 @@
+import { QUIZ_XP } from '@/services/gamification-service'
 import type { Profile } from '@/types/models'
 
 /**
@@ -47,6 +48,11 @@ export const PAGE_TOURS: PageTour[] = [
         body: "It packs a lot in, so here's a 60-second tour of the essentials. You can skip anytime.",
       },
       {
+        target: '[data-tour="progress"]',
+        title: 'Where you stand',
+        body: 'Your level, quiz average, streak and badges — first thing, every time. Quiz answers are marked on the server, so they are the XP that counts.',
+      },
+      {
         target: '[data-tour="priority"]',
         title: 'Your #1 priority',
         body: 'The dashboard always surfaces the single most important thing to do next, ranked from your real deadlines — so you never have to wonder where to start.',
@@ -54,12 +60,17 @@ export const PAGE_TOURS: PageTour[] = [
       {
         target: '[data-tour="today"]',
         title: 'Today at a glance',
-        body: 'Your tasks for today live here — tick them off right from the dashboard. Nearby cards show your schedule, study time and streak.',
+        body: 'Your tasks for today live here — tick them off right from the dashboard. Nearby cards show your schedule, your latest quiz scores and study time.',
+      },
+      {
+        target: '[data-tour="quests"]',
+        title: 'A shape for the week',
+        body: 'Three quests, the same for everyone, new every Monday. Finish one and claim its bonus XP right here, on top of what you earned doing it.',
       },
       {
         target: NAV,
         title: 'Everything lives here',
-        body: 'Planner, calendar, focus timer, AI coach, habits, budget and notes — reach any tool from here. Explore one area at a time; you don’t need it all at once.',
+        body: 'Planner, calendar, focus timer, quizzes, habits and notes — reach any tool from here. Explore one area at a time; you don’t need it all at once.',
       },
       {
         target: REPLAY,
@@ -162,6 +173,29 @@ export const PAGE_TOURS: PageTour[] = [
   },
 
   {
+    id: 'quiz',
+    path: '/app/quiz',
+    label: 'Quizzes',
+    steps: [
+      {
+        target: '[data-tour="quiz-generate"]',
+        title: 'Quiz yourself on your own material',
+        body: 'Upload a lecture PDF or photos of your notes, or pick a note. Choose the topics, the length and how hard, and every question comes from that material, with the page it is on. Boss quizzes need 80% to beat.',
+      },
+      {
+        target: '[data-tour="quiz-stats"]',
+        title: 'XP you actually earned',
+        body: `Every correct answer is worth ${QUIZ_XP.correct} XP, checked on the server against an answer key your browser never sees. This is the one score in StudentOS that cannot be faked.`,
+      },
+      {
+        target: '[data-tour="quiz-library"]',
+        title: 'Revise, as often as you like',
+        body: 'Re-taking a quiz is free and always records your score — it just will not pay XP twice. The first attempt is the one that counts.',
+      },
+    ],
+  },
+
+  {
     id: 'smart-plan',
     path: '/app/smart-plan',
     label: 'Smart Plan',
@@ -182,28 +216,6 @@ export const PAGE_TOURS: PageTour[] = [
       {
         title: 'Save, edit, delete',
         body: 'Keep a plan to come back to it — then reopen it, resize or drop blocks that stopped fitting, rename it, or delete it when the term moves on.',
-      },
-    ],
-  },
-
-  {
-    id: 'coach',
-    path: '/app/coach',
-    label: 'AI Coach',
-    steps: [
-      {
-        target: '[data-tour="coach-composer"]',
-        title: 'Ask anything about your studies',
-        body: 'Explanations, quizzes, flashcards, essay feedback, debugging help — ask in your own words.',
-      },
-      {
-        title: 'It knows your deadlines',
-        body: 'The coach sees your live assignment list, so "what should I work on tonight?" gets an answer grounded in your actual workload.',
-      },
-      {
-        target: '[data-tour="coach-conversations"]',
-        title: 'Conversations stay put',
-        body: 'Each chat is saved, so you can pick a topic back up next week instead of re-explaining the module.',
       },
     ],
   },
@@ -250,29 +262,6 @@ export const PAGE_TOURS: PageTour[] = [
   },
 
   {
-    id: 'budget',
-    path: '/app/budget',
-    label: 'Budget',
-    steps: [
-      {
-        target: '[data-tour="budget-summary"]',
-        title: 'Where the month stands',
-        body: 'Income in, money spent, what is left, and how much you have put toward savings goals.',
-      },
-      {
-        target: '[data-tour="budget-month"]',
-        title: 'One month at a time',
-        body: 'Step back and forward between months. Each month keeps its own limit and transactions, so a bad October does not haunt November.',
-      },
-      {
-        target: ACTIONS,
-        title: 'Set a limit, log as you go',
-        body: 'Set your monthly budget once, then log transactions as they happen — a minute a day is what makes the numbers trustworthy.',
-      },
-    ],
-  },
-
-  {
     id: 'notes',
     path: '/app/notes',
     label: 'Notes',
@@ -296,6 +285,52 @@ export const PAGE_TOURS: PageTour[] = [
   },
 
   {
+    id: 'quests',
+    path: '/app/quests',
+    label: 'Quests',
+    steps: [
+      {
+        target: '[data-tour="quest-board"]',
+        title: 'Three quests a week',
+        body: 'One for showing up, one for proving what you know, one for keeping moving. Everyone gets the same three, and a new set arrives every Monday.',
+      },
+      {
+        target: '[data-tour="quest-rules"]',
+        title: 'Progress you cannot fake',
+        body: 'Quests count what StudentOS can check — quizzes marked on our server, and activity you have already been rewarded for. Nothing here can be typed in.',
+      },
+      {
+        target: '[data-tour="quest-history"]',
+        title: 'Claim it to keep it',
+        body: 'A finished quest waits until Sunday night. Claim it and its bonus XP is yours, on top of the XP you earned doing it; every claim is listed here.',
+      },
+    ],
+  },
+
+  {
+    id: 'squad',
+    path: '/app/squad',
+    label: 'Squad',
+    steps: [
+      {
+        target: ['[data-tour="squad-standings"]', '[data-tour="squad-start"]'],
+        title: 'A week, together',
+        body: 'Three to six of you on the same three quests, with one table of the XP each of you earned since Monday. It starts again every Monday.',
+      },
+      {
+        target: ['[data-tour="squad-invite"]', '[data-tour="squad-start"]'],
+        title: 'Bring your study group',
+        body: 'Every squad has an eight-character code. Send it to the friends you study with; they join with a handle of their own.',
+      },
+      {
+        target: '[data-tour="squad-privacy"]',
+        title: 'Only what you would put on a whiteboard',
+        body: 'Your squad sees your handle, your XP this week, your streak and your quest ticks. Never your name, modules, grades or notes. Squads pay no XP.',
+      },
+    ],
+  },
+
+  {
     id: 'achievements',
     path: '/app/achievements',
     label: 'Achievements',
@@ -303,7 +338,7 @@ export const PAGE_TOURS: PageTour[] = [
       {
         target: '[data-tour="level-hero"]',
         title: 'XP for real work',
-        body: 'Finishing tasks, logging focus sessions and keeping habits all earn XP. Levels are just a receipt for showing up.',
+        body: 'Quiz answers earn the most, because they are marked on our server. Tasks, focus sessions and habits earn a little each, up to a daily limit. Levels are the receipt.',
       },
       {
         target: '[data-tour="badges"]',
@@ -321,7 +356,7 @@ export const PAGE_TOURS: PageTour[] = [
       {
         target: '[data-tour="billing-plans"]',
         title: 'What each plan unlocks',
-        body: 'Free covers the core planner, assignments and focus timer. Pro adds smart prioritization, the AI coach and unlimited assignments.',
+        body: 'Free covers the core planner, assignments and focus timer. Pro adds smart prioritization, AI quizzes from your notes and unlimited assignments.',
       },
       {
         title: 'Change or cancel anytime',

@@ -21,6 +21,11 @@ const GEMINI_API_KEY = denoEnv?.get('GEMINI_API_KEY')
 /** Flash is fast and cheap enough for per-message use; override per deployment. */
 const GEMINI_MODEL = denoEnv?.get('GEMINI_MODEL') ?? 'gemini-2.5-flash'
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
+const FILES_BASE = 'https://generativelanguage.googleapis.com/v1beta'
+const UPLOAD_BASE = 'https://generativelanguage.googleapis.com/upload/v1beta/files'
+
+/** Long enough for a 20 MB PDF to be read; short of the platform's wall clock. */
+const DEFAULT_TIMEOUT_MS = 100_000
 
 /**
  * How many tokens the model may spend reasoning before it starts writing.
@@ -53,11 +58,21 @@ export interface InlineFile {
   data: string
 }
 
+/** A file already uploaded through the Files API (see uploadFile). */
+export interface GeminiFile {
+  /** `files/abc123` — what deleteFile takes. */
+  name: string
+  uri: string
+  mimeType: string
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   /** Files sent with this turn (PDF, image or text) — user turns only. */
   files?: InlineFile[]
+  /** Files uploaded beforehand, referenced by URI — user turns only. */
+  fileRefs?: GeminiFile[]
 }
 
 /** Carries an HTTP status so callers can pass a sensible code to the client. */
@@ -95,6 +110,102 @@ export interface GenerateOptions {
    * comes OUT of `maxOutputTokens` — see THINKING_BUDGET.
    */
   thinkingBudget?: number
+  /**
+   * The shape the JSON must take (Gemini's OpenAPI-style Schema). The reply is
+   * still validated by the caller: a schema makes malformed output rare, not
+   * impossible, and the caller is the one storing it.
+   */
+  responseSchema?: unknown
+  /**
+   * Characters of each message's text that are sent. 8000 suits a chat turn;
+   * a caller sending a whole note as the material says so explicitly.
+   */
+  maxMessageChars?: number
+  /** Give up after this long rather than outlive the Edge Function. */
+  timeoutMs?: number
+}
+
+/**
+ * Upload a file through the Files API, for use in several requests.
+ *
+ * Inline data would send the same bytes again with every request, and a quiz
+ * that is written and then checked reads its PDF twice. Files expire on
+ * Google's side after 48 hours regardless; callers delete them when done.
+ */
+export async function uploadFile(bytes: ArrayBuffer, mimeType: string, displayName: string): Promise<GeminiFile> {
+  if (!GEMINI_API_KEY) throw new GeminiError('AI is not configured on this deployment.', 503)
+
+  const started = await fetch(UPLOAD_BASE, {
+    method: 'POST',
+    headers: {
+      'x-goog-api-key': GEMINI_API_KEY,
+      'X-Goog-Upload-Protocol': 'resumable',
+      'X-Goog-Upload-Command': 'start',
+      'X-Goog-Upload-Header-Content-Length': String(bytes.byteLength),
+      'X-Goog-Upload-Header-Content-Type': mimeType,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ file: { displayName: displayName.slice(0, 120) } }),
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+  })
+  const uploadUrl = started.headers.get('x-goog-upload-url')
+  if (!started.ok || !uploadUrl) {
+    console.error('[gemini] upload start failed', started.status, await started.text().catch(() => ''))
+    throw uploadError(started.status)
+  }
+
+  const finished = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'X-Goog-Upload-Offset': '0',
+      'X-Goog-Upload-Command': 'upload, finalize',
+    },
+    body: bytes,
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+  })
+  if (!finished.ok) {
+    console.error('[gemini] upload failed', finished.status, await finished.text().catch(() => ''))
+    throw uploadError(finished.status)
+  }
+
+  const body = (await finished.json()) as {
+    file?: { name?: string; uri?: string; mimeType?: string; state?: string }
+  }
+  const file = body.file
+  if (!file?.name || !file.uri) throw uploadError(502)
+
+  // Documents and images are normally usable at once; one still being
+  // processed is waited for briefly, rather than sent and refused.
+  let state = file.state ?? 'ACTIVE'
+  for (let attempt = 0; state === 'PROCESSING' && attempt < 10; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    const polled = await fetch(`${FILES_BASE}/${file.name}`, { headers: { 'x-goog-api-key': GEMINI_API_KEY } })
+    state = polled.ok ? (((await polled.json()) as { state?: string }).state ?? 'ACTIVE') : 'FAILED'
+  }
+  if (state !== 'ACTIVE') {
+    void deleteFile(file.name)
+    throw new GeminiError('The AI service could not read that file.', 422)
+  }
+
+  return { name: file.name, uri: file.uri, mimeType: file.mimeType ?? mimeType }
+}
+
+function uploadError(status: number): GeminiError {
+  const retryable = status === 429 || status >= 500
+  return new GeminiError(
+    retryable ? 'The AI service is busy right now. Try again in a moment.' : 'The AI service could not take that file.',
+    retryable ? 503 : 502,
+  )
+}
+
+/** Delete an uploaded file. Best effort: it expires on its own within 48 hours. */
+export async function deleteFile(name: string): Promise<void> {
+  if (!GEMINI_API_KEY) return
+  try {
+    await fetch(`${FILES_BASE}/${name}`, { method: 'DELETE', headers: { 'x-goog-api-key': GEMINI_API_KEY } })
+  } catch (error) {
+    console.warn('[gemini] could not delete an uploaded file', name, error)
+  }
 }
 
 /**
@@ -116,52 +227,74 @@ export async function generate(options: GenerateOptions): Promise<string> {
     throw new GeminiError('There is nothing to send to the AI service.', 400)
   }
 
-  const response = await fetch(`${API_BASE}/${GEMINI_MODEL}:generateContent`, {
-    method: 'POST',
-    headers: {
-      'x-goog-api-key': GEMINI_API_KEY,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      // Canonical camelCase throughout. The proto-JSON parser also accepts
-      // snake_case, but mixing the two is how an `inline_data` block quietly
-      // goes missing — and a dropped attachment looks exactly like the model
-      // ignoring the file.
-      systemInstruction: { parts: [{ text: options.system }] },
-      // Gemini names the assistant turn "model"; everything else is "user".
-      contents: messages.map((message) => {
-        const text = String(message.content ?? '').slice(0, 8000)
-        const files =
-          // Attachments ride alongside the text of the same turn. Only user
-          // turns carry them; a model turn with inline data is rejected.
-          message.role === 'user'
-            ? (message.files ?? []).map((file) => ({
-                inlineData: { mimeType: file.mimeType, data: file.data },
-              }))
-            : []
-        return {
-          role: message.role === 'assistant' ? 'model' : 'user',
-          // An empty text part is not just noise — it can make Gemini treat
-          // the turn as contentless and answer the system prompt instead. Send
-          // one only when there is something to send.
-          parts: text.trim() ? [{ text }, ...files] : files.length > 0 ? files : [{ text }],
-        }
-      }),
-      generationConfig: {
-        maxOutputTokens: options.maxOutputTokens ?? 4096,
-        temperature: options.temperature ?? 0.7,
-        // Gemini 2.5 reasons before it writes, and those thinking tokens are
-        // billed against maxOutputTokens. Left on "dynamic" the model can spend
-        // most of the budget thinking about a long document and then get cut
-        // off mid-answer — which reads as "the reply is longer but still
-        // incomplete" no matter how high the ceiling goes. Capping reasoning is
-        // the fix; raising the ceiling alone only buys a little more each time.
-        thinkingConfig: { thinkingBudget: options.thinkingBudget ?? THINKING_BUDGET },
-        ...(options.responseMimeType ? { responseMimeType: options.responseMimeType } : {}),
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE}/${GEMINI_MODEL}:generateContent`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+      headers: {
+        'x-goog-api-key': GEMINI_API_KEY,
+        'content-type': 'application/json',
       },
-    }),
-  })
+      body: requestBody(options, messages),
+    })
+  } catch (error) {
+    // A timeout or a dropped connection, before Gemini answered at all.
+    console.error('[gemini] request did not complete', error)
+    throw new GeminiError('The AI service took too long to answer. Try again.', 503)
+  }
 
+  return readCompletion(response, options)
+}
+
+function requestBody(options: GenerateOptions, messages: ChatMessage[]): string {
+  return JSON.stringify({
+    // Canonical camelCase throughout. The proto-JSON parser also accepts
+    // snake_case, but mixing the two is how an `inline_data` block quietly
+    // goes missing — and a dropped attachment looks exactly like the model
+    // ignoring the file.
+    systemInstruction: { parts: [{ text: options.system }] },
+    // Gemini names the assistant turn "model"; everything else is "user".
+    contents: messages.map((message) => {
+      const text = String(message.content ?? '').slice(0, options.maxMessageChars ?? 8000)
+      const files =
+        // Attachments ride alongside the text of the same turn. Only user
+        // turns carry them; a model turn with file data is rejected.
+        message.role === 'user'
+          ? [
+              ...(message.files ?? []).map((file) => ({
+                inlineData: { mimeType: file.mimeType, data: file.data },
+              })),
+              ...(message.fileRefs ?? []).map((file) => ({
+                fileData: { mimeType: file.mimeType, fileUri: file.uri },
+              })),
+            ]
+          : []
+      return {
+        role: message.role === 'assistant' ? 'model' : 'user',
+        // An empty text part is not just noise — it can make Gemini treat
+        // the turn as contentless and answer the system prompt instead. Send
+        // one only when there is something to send.
+        parts: text.trim() ? [{ text }, ...files] : files.length > 0 ? files : [{ text }],
+      }
+    }),
+    generationConfig: {
+      maxOutputTokens: options.maxOutputTokens ?? 4096,
+      temperature: options.temperature ?? 0.7,
+      // Gemini 2.5 reasons before it writes, and those thinking tokens are
+      // billed against maxOutputTokens. Left on "dynamic" the model can spend
+      // most of the budget thinking about a long document and then get cut
+      // off mid-answer — which reads as "the reply is longer but still
+      // incomplete" no matter how high the ceiling goes. Capping reasoning is
+      // the fix; raising the ceiling alone only buys a little more each time.
+      thinkingConfig: { thinkingBudget: options.thinkingBudget ?? THINKING_BUDGET },
+      ...(options.responseMimeType ? { responseMimeType: options.responseMimeType } : {}),
+      ...(options.responseSchema ? { responseSchema: options.responseSchema } : {}),
+    },
+  })
+}
+
+async function readCompletion(response: Response, options: GenerateOptions): Promise<string> {
   if (!response.ok) {
     const detail = await response.text()
     console.error('[gemini] request failed', response.status, detail)

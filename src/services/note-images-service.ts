@@ -111,8 +111,11 @@ function canvasBlob(canvas: HTMLCanvasElement, type: string, quality: number): P
  * The image as it will be stored. Small images in a stored format are kept as
  * they are; anything big, or in a format storage doesn't take (BMP, AVIF,
  * HEIC where the browser can read it), is scaled down and re-encoded.
+ *
+ * Also used for photos of notes added to the study library, which want the
+ * same thing: legible at 2400px, and nowhere near the size a phone takes them.
  */
-async function prepareImage(file: Blob): Promise<Blob> {
+export async function prepareImage(file: Blob): Promise<Blob> {
   if (file.type === 'image/gif') {
     // Re-encoding a GIF would freeze its animation, so it goes up as it is or not at all.
     if (file.size > NOTE_IMAGE_MAX_BYTES) throw new NoteImageError(NOTE_IMAGE_MESSAGES.tooLarge)

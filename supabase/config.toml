@@ -3,10 +3,20 @@
 
 project_id = "studentos"
 
-[functions.ai-chat]
+[functions.ai-plan]
 verify_jwt = true
 
-[functions.ai-plan]
+# ── Quiz engine ─────────────────────────────────────────────────────────────
+[functions.quiz-generate]
+verify_jwt = true
+
+[functions.quiz-grade]
+# Every plan can be marked. The function still verifies the JWT itself and
+# grades only the caller's own quizzes.
+verify_jwt = true
+
+[functions.resource-outline]
+# Reads an uploaded study file's topics. Every plan; metered per day in SQL.
 verify_jwt = true
 
 # ── Payments: Paystack is the live processor (ZAR) ──────────────────────────

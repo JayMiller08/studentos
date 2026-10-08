@@ -10,7 +10,7 @@ import {
   remainingQuota,
 } from '@/lib/plans'
 
-const METERED: CountedResource[] = ['assignments', 'tasks', 'notes']
+const METERED: CountedResource[] = ['assignments', 'tasks', 'notes', 'resources']
 
 describe('plan gating', () => {
   it('caps free users at 3 active assignments', () => {
@@ -25,9 +25,10 @@ describe('plan gating', () => {
   })
 
   it('keeps plan capabilities monotonic across tiers', () => {
-    expect(PLANS.free.limits.aiCoach).toBe(false)
-    expect(PLANS.pro.limits.aiCoach).toBe(true)
-    expect(PLANS.elite.limits.aiCoach).toBe(true)
+    // Every plan can make AI quizzes; the monthly allowance is what grows.
+    expect(PLANS.free.limits.aiQuiz).toBe(true)
+    expect(PLANS.free.limits.aiQuizzesPerMonth).toBeLessThan(PLANS.pro.limits.aiQuizzesPerMonth)
+    expect(PLANS.pro.limits.aiQuizzesPerMonth).toBeLessThan(PLANS.elite.limits.aiQuizzesPerMonth)
     expect(PLANS.elite.limits.careerTools).toBe(true)
     expect(PLANS.pro.limits.careerTools).toBe(false)
   })
@@ -62,7 +63,7 @@ describe('the Student Pro promise', () => {
       'smartPrioritization',
       'aiPlanner',
       'advancedAnalytics',
-      'aiCoach',
+      'aiQuiz',
       'careerTools',
     ] as const
     for (let i = 1; i < PLAN_ORDER.length; i += 1) {

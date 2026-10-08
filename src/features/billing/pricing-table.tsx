@@ -36,11 +36,14 @@ export function PricingTable({
             key={planId}
             className={cn(
               'relative flex flex-col',
-              highlighted && 'border-primary shadow-md ring-primary/20 ring-1',
+              // The featured plan gets the gradient ring and the highest
+              // elevation on the page; the wash inside overrides the card sheen
+              // because it is a utility and the sheen is a component style.
+              highlighted && 'ring-gradient shadow-e3 from-primary/10 bg-gradient-to-b to-transparent',
             )}
           >
             {highlighted ? (
-              <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
+              <Badge className="shadow-button absolute -top-3 left-1/2 -translate-x-1/2">
                 <Sparkles className="size-3" /> Most popular
               </Badge>
             ) : null}
@@ -51,7 +54,9 @@ export function PricingTable({
                 <p className="text-muted-foreground text-sm">{plan.tagline}</p>
               </div>
               <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-3xl font-bold">{formatPlanPrice(plan.monthlyPrice)}</span>
+                <span className="font-display text-4xl font-semibold tracking-tight tabular-nums">
+                  {formatPlanPrice(plan.monthlyPrice)}
+                </span>
                 {plan.monthlyPrice > 0 ? (
                   <span className="text-muted-foreground text-sm">/month</span>
                 ) : null}

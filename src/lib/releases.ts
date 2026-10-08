@@ -29,6 +29,84 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    date: '2026-10-08',
+    title: 'Squads',
+    changes: [
+      {
+        kind: 'new',
+        title: 'Study with a squad',
+        body: 'Start a squad of three to six and send your friends its code. You get the same three quests every week and one table of the XP each of you earned since Monday. It starts again every Monday.',
+      },
+      {
+        kind: 'new',
+        title: 'Your handle, not your name',
+        body: 'Your squad sees a handle you choose, your XP this week, your streak and which quests you have claimed. Never your name, university, modules, grades or notes. Squads pay no XP, so there is nothing to game.',
+      },
+    ],
+  },
+  {
+    date: '2026-10-07',
+    title: 'Quizzes from your own files, and weekly quests',
+    changes: [
+      {
+        kind: 'new',
+        title: 'Quiz yourself on your lecture slides',
+        body: 'Upload a lecture PDF or photos of your notes and StudentOS writes a quiz from exactly that — every question citing the page it comes from. Pick the topics, the length and how hard it should be. Your files stay private, in a library you can quiz from again any time.',
+      },
+      {
+        kind: 'improved',
+        title: 'Every plan can make AI quizzes',
+        body: 'Free now includes 3 AI quizzes a month, Pro 40 and Elite 150. Each quiz is checked twice against your material before you see it, so the answers are right.',
+      },
+      {
+        kind: 'new',
+        title: 'Three quests every week',
+        body: 'One for showing up, one for proving what you know, one for keeping moving — the same three for everyone, and a new set every Monday. Finish one and claim its bonus XP, on top of what you earned doing it, straight from the dashboard.',
+      },
+      {
+        kind: 'improved',
+        title: 'XP nobody can edit',
+        body: 'Your XP, level, streak and badges are now worked out by our server from what you actually did, so nobody can type their way up a level. That matters now that quests pay out.',
+      },
+      {
+        kind: 'improved',
+        title: 'Everything pays once',
+        body: 'Ticking the same task twice, or a habit for the same day, now pays once, and everyday activity has a daily limit. Quizzes have no limit — they are the XP you prove.',
+      },
+      {
+        kind: 'fixed',
+        title: 'Quizzes keep your streak',
+        body: 'Answering a quiz now counts as studying for the day, and reaching a new level through a quiz unlocks its badge straight away.',
+      },
+    ],
+  },
+  {
+    date: '2026-09-27',
+    title: 'Quizzes — XP you have to earn',
+    changes: [
+      {
+        kind: 'new',
+        title: 'Turn any note into a quiz',
+        body: 'Pick a note and StudentOS writes multiple-choice questions from it. Answer them and you earn 8 XP per correct answer — marked on our server, against an answer key your browser never sees. Boss quizzes need 80% and are worth a lot more.',
+      },
+      {
+        kind: 'improved',
+        title: 'XP now means something',
+        body: 'Focus sessions and ticked tasks are worth less than they were, because both are things you tell us about rather than things we can check. Quiz answers are the opposite, so that is where the points moved.',
+      },
+      {
+        kind: 'improved',
+        title: 'A calmer, deeper look',
+        body: 'New dashboard layout, a redesigned sign-in, and real depth on every card — especially in dark mode.',
+      },
+      {
+        kind: 'fixed',
+        title: 'Budget and the AI Coach have gone',
+        body: 'Both were pulling attention away from your studies. The Coach’s AI now writes your quizzes instead, and Smart Plan is unchanged.',
+      },
+    ],
+  },
+  {
     date: '2026-09-23',
     title: 'An image button, and checklists that mind their own business',
     changes: [

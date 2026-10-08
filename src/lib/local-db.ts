@@ -121,7 +121,9 @@ export const localDb = {
     const row = {
       id: (values.id as string | undefined) ?? crypto.randomUUID(),
       ...values,
-      created_at: now,
+      // A column default, as in Postgres: it applies only when the insert
+      // doesn't say. The demo seed back-dates history this way.
+      created_at: typeof values.created_at === 'string' ? values.created_at : now,
       updated_at: now,
     } as T
     const rows = readAll<T>(tableName)

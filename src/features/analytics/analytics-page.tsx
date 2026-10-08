@@ -23,7 +23,6 @@ import {
   Pie,
   PieChart,
   ReferenceLine,
-  ResponsiveContainer,
   Tooltip as ChartTooltip,
   XAxis,
   YAxis,
@@ -31,17 +30,15 @@ import {
 import { PageHeader } from '@/components/page-header'
 import { PlanGate } from '@/components/plan-gate'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { ChartCard } from '@/components/ui/chart-card'
+import { SectionCard } from '@/components/ui/section-card'
+import { StatTile } from '@/components/ui/stat-tile'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAssignments, useModules } from '@/features/assignments/hooks'
 import { useStudySessions } from '@/features/focus/hooks'
 import { useTasks } from '@/features/planner/hooks'
 import { usePlan } from '@/hooks/use-plan'
+import { CHART_AXIS, CHART_GRID, CHART_TOOLTIP_STYLE, PLOT_MARGIN } from '@/lib/chart-theme'
 import { clamp, formatMinutes, percent, toDateKey } from '@/lib/utils'
 import {
   bestFocusWindow,
@@ -52,37 +49,6 @@ import {
   weightedAverageGrade,
 } from '@/services/analytics-service'
 import { computeFocusStats } from '@/services/focus-service'
-
-const CHART_TOOLTIP_STYLE: React.CSSProperties = {
-  backgroundColor: 'var(--popover)',
-  border: '1px solid var(--border)',
-  borderRadius: '0.5rem',
-  color: 'var(--popover-foreground)',
-  fontSize: '12px',
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: typeof Timer
-  label: string
-  value: string
-  hint?: string
-}) {
-  return (
-    <Card className="gap-1 py-4">
-      <CardContent className="space-y-1">
-        <Icon aria-hidden className="text-primary size-4" />
-        <p className="text-2xl font-semibold">{value}</p>
-        <p className="text-muted-foreground text-xs">{label}</p>
-        {hint ? <p className="text-muted-foreground/70 text-[11px]">{hint}</p> : null}
-      </CardContent>
-    </Card>
-  )
-}
 
 export function AnalyticsPage() {
   const { data: sessions = [] } = useStudySessions()
@@ -205,6 +171,7 @@ export function AnalyticsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessions, taskRate, completionRate])
 
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -220,100 +187,75 @@ export function AnalyticsPage() {
       />
 
       <div data-tour="analytics-stats" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
+        <StatTile
           icon={Gauge}
           label="Productivity score"
-          value={String(productivityScore)}
+          value={productivityScore}
           hint="Consistency + completion, last 2 weeks"
+          tone="primary"
         />
-        <StatCard icon={Timer} label="Focus this month" value={formatMinutes(stats.monthMinutes)} />
-        <StatCard
+        <StatTile icon={Timer} label="Focus this month" value={formatMinutes(stats.monthMinutes)} />
+        <StatTile
           icon={CheckCircle2}
           label="Assignment completion"
           value={`${completionRate}%`}
           hint={`${completedAssignments}/${assignments.length} finished`}
+          tone="success"
         />
-        <StatCard
+        <StatTile
           icon={Activity}
           label="Tasks completed"
-          value={String(doneTasks)}
+          value={doneTasks}
           hint={`${taskRate}% of all tasks`}
         />
       </div>
 
       <div data-tour="analytics-charts" className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Daily focus — last 30 days</CardTitle>
-            <CardDescription>Minutes of logged focus per day</CardDescription>
-          </CardHeader>
-          <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dailyFocus} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
-                <defs>
-                  <linearGradient id="focusFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="day"
-                  tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  interval={6}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <ChartTooltip contentStyle={CHART_TOOLTIP_STYLE} />
-                <Area
-                  type="monotone"
-                  dataKey="minutes"
-                  stroke="var(--chart-1)"
-                  strokeWidth={2}
-                  fill="url(#focusFill)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        <ChartCard icon={Timer} title="Daily focus — last 30 days" description="Minutes of logged focus per day">
+          <AreaChart data={dailyFocus} margin={PLOT_MARGIN}>
+            <defs>
+              <linearGradient id="focusFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid {...CHART_GRID} />
+            <XAxis dataKey="day" {...CHART_AXIS} interval={6} />
+            <YAxis {...CHART_AXIS} />
+            <ChartTooltip contentStyle={CHART_TOOLTIP_STYLE} />
+            <Area
+              type="monotone"
+              dataKey="minutes"
+              stroke="var(--chart-1)"
+              strokeWidth={2}
+              fill="url(#focusFill)"
+            />
+          </AreaChart>
+        </ChartCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Assignment pipeline</CardTitle>
-            <CardDescription>Where your assignments stand</CardDescription>
-          </CardHeader>
-          <CardContent className="h-64">
-            {assignmentStatus.length === 0 ? (
-              <p className="text-muted-foreground flex h-full items-center justify-center text-sm">
-                Add assignments to see your pipeline.
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={assignmentStatus}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius="55%"
-                    outerRadius="80%"
-                    paddingAngle={3}
-                    strokeWidth={0}
-                  >
-                    {assignmentStatus.map((entry) => (
-                      <Cell key={entry.key} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <ChartTooltip contentStyle={CHART_TOOLTIP_STYLE} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        <ChartCard
+          icon={CheckCircle2}
+          title="Assignment pipeline"
+          description="Where your assignments stand"
+          empty={assignmentStatus.length === 0 ? 'Add assignments to see your pipeline.' : undefined}
+        >
+          <PieChart>
+            <Pie
+              data={assignmentStatus}
+              dataKey="value"
+              nameKey="name"
+              innerRadius="55%"
+              outerRadius="80%"
+              paddingAngle={3}
+              strokeWidth={0}
+            >
+              {assignmentStatus.map((entry) => (
+                <Cell key={entry.key} fill={entry.color} />
+              ))}
+            </Pie>
+            <ChartTooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          </PieChart>
+        </ChartCard>
       </div>
 
       <PlanGate
@@ -322,226 +264,152 @@ export function AnalyticsPage() {
         description="Unlock 8-week trends, per-module time-vs-grade breakdowns, your peak focus hours, grade trajectory and CSV export."
       >
         <div className="space-y-4">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Study hours — weekly trend</CardTitle>
-              <CardDescription>Last 8 weeks</CardDescription>
-            </CardHeader>
-            <CardContent className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weekly} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis
-                    dataKey="week"
-                    tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <ChartTooltip contentStyle={CHART_TOOLTIP_STYLE} cursor={{ fill: 'var(--accent)' }} />
-                  <Bar dataKey="hours" fill="var(--chart-2)" radius={[6, 6, 0, 0]} maxBarSize={36} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Tasks completed — weekly trend</CardTitle>
-              <CardDescription>Last 8 weeks</CardDescription>
-            </CardHeader>
-            <CardContent className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weekly} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis
-                    dataKey="week"
-                    tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                    allowDecimals={false}
-                  />
-                  <ChartTooltip contentStyle={CHART_TOOLTIP_STYLE} cursor={{ fill: 'var(--accent)' }} />
-                  <Bar dataKey="tasks" fill="var(--chart-3)" radius={[6, 6, 0, 0]} maxBarSize={36} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Peak focus hours */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Sunrise aria-hidden className="text-primary size-4" /> When you actually focus
-            </CardTitle>
-            <CardDescription>
-              {peakWindow
-                ? `Your strongest stretch is ${peakWindow.label} — ${formatMinutes(peakWindow.minutes)} logged there. Protect it for your hardest work.`
-                : 'Log a few focus sessions and your peak hours will show up here.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={focusByHour} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  interval={2}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <ChartTooltip
-                  contentStyle={CHART_TOOLTIP_STYLE}
-                  cursor={{ fill: 'var(--accent)' }}
-                  formatter={(value) => [formatMinutes(Number(value ?? 0)), 'Focus']}
-                />
-                <Bar dataKey="minutes" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ChartCard icon={Timer} title="Study hours — weekly trend" description="Last 8 weeks">
+              <BarChart data={weekly} margin={PLOT_MARGIN}>
+                <CartesianGrid {...CHART_GRID} />
+                <XAxis dataKey="week" {...CHART_AXIS} />
+                <YAxis {...CHART_AXIS} />
+                <ChartTooltip contentStyle={CHART_TOOLTIP_STYLE} cursor={{ fill: 'var(--accent)' }} />
+                <Bar dataKey="hours" fill="var(--chart-2)" radius={[6, 6, 0, 0]} maxBarSize={36} />
               </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+            </ChartCard>
 
-        {/* Grade trajectory */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <GraduationCap aria-hidden className="text-primary size-4" /> Grade trajectory
-            </CardTitle>
-            <CardDescription>
-              {overallGrade !== null
+            <ChartCard icon={Activity} title="Tasks completed — weekly trend" description="Last 8 weeks">
+              <BarChart data={weekly} margin={PLOT_MARGIN}>
+                <CartesianGrid {...CHART_GRID} />
+                <XAxis dataKey="week" {...CHART_AXIS} />
+                <YAxis {...CHART_AXIS} allowDecimals={false} />
+                <ChartTooltip contentStyle={CHART_TOOLTIP_STYLE} cursor={{ fill: 'var(--accent)' }} />
+                <Bar dataKey="tasks" fill="var(--chart-3)" radius={[6, 6, 0, 0]} maxBarSize={36} />
+              </BarChart>
+            </ChartCard>
+          </div>
+
+          {/* Peak focus hours */}
+          <ChartCard
+            height={224}
+            icon={Sunrise}
+            title="When you actually focus"
+            description={
+              peakWindow
+                ? `Your strongest stretch is ${peakWindow.label} — ${formatMinutes(peakWindow.minutes)} logged there. Protect it for your hardest work.`
+                : 'Log a few focus sessions and your peak hours will show up here.'
+            }
+          >
+            <BarChart data={focusByHour} margin={PLOT_MARGIN}>
+              <CartesianGrid {...CHART_GRID} />
+              <XAxis dataKey="label" {...CHART_AXIS} interval={2} />
+              <YAxis {...CHART_AXIS} />
+              <ChartTooltip
+                contentStyle={CHART_TOOLTIP_STYLE}
+                cursor={{ fill: 'var(--accent)' }}
+                formatter={(value) => [formatMinutes(Number(value ?? 0)), 'Focus']}
+              />
+              <Bar dataKey="minutes" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ChartCard>
+
+          {/* Grade trajectory */}
+          <ChartCard
+            icon={GraduationCap}
+            title="Grade trajectory"
+            description={
+              overallGrade !== null
                 ? `Weighted average ${overallGrade}% across ${gradeTrend.length} graded assignment${gradeTrend.length === 1 ? '' : 's'}. The line is your running average — individual marks are the dots.`
-                : 'Record a grade on a submitted assignment to start tracking your average.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="h-64">
-            {gradeTrend.length === 0 ? (
-              <p className="text-muted-foreground flex h-full items-center justify-center text-sm">
-                No grades captured yet
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={gradeTrend} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis
-                    dataKey="title"
-                    tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(title: string) =>
-                      title.length > 12 ? `${title.slice(0, 12)}…` : title
-                    }
-                  />
-                  <YAxis
-                    domain={[0, 100]}
-                    tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <ChartTooltip contentStyle={CHART_TOOLTIP_STYLE} />
-                  {/* 50% is the pass mark at most SA institutions. */}
-                  <ReferenceLine y={50} stroke="var(--destructive)" strokeDasharray="4 4" />
-                  <Line
-                    type="monotone"
-                    dataKey="grade"
-                    stroke="var(--chart-3)"
-                    strokeWidth={0}
-                    dot={{ r: 4, fill: 'var(--chart-3)' }}
-                    name="Grade"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="runningAverage"
-                    stroke="var(--chart-1)"
-                    strokeWidth={2}
-                    dot={false}
-                    name="Running average"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+                : 'Record a grade on a submitted assignment to start tracking your average.'
+            }
+            empty={gradeTrend.length === 0 ? 'No grades captured yet' : undefined}
+          >
+            <LineChart data={gradeTrend} margin={PLOT_MARGIN}>
+              <CartesianGrid {...CHART_GRID} />
+              <XAxis
+                dataKey="title"
+                {...CHART_AXIS}
+                tickFormatter={(title: string) =>
+                  title.length > 12 ? `${title.slice(0, 12)}…` : title
+                }
+              />
+              <YAxis domain={[0, 100]} {...CHART_AXIS} />
+              <ChartTooltip contentStyle={CHART_TOOLTIP_STYLE} />
+              {/* 50% is the pass mark at most SA institutions. */}
+              <ReferenceLine y={50} stroke="var(--destructive)" strokeDasharray="4 4" />
+              <Line
+                type="monotone"
+                dataKey="grade"
+                stroke="var(--chart-3)"
+                strokeWidth={0}
+                dot={{ r: 4, fill: 'var(--chart-3)' }}
+                name="Grade"
+              />
+              <Line
+                type="monotone"
+                dataKey="runningAverage"
+                stroke="var(--chart-1)"
+                strokeWidth={2}
+                dot={false}
+                name="Running average"
+              />
+            </LineChart>
+          </ChartCard>
 
-        {/* Module breakdown */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Where your time goes</CardTitle>
-            <CardDescription>
-              Focus logged against each module, next to the marks it earned
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+          {/* Module breakdown */}
+          <SectionCard
+            title="Where your time goes"
+            description="Focus logged against each module, next to the marks it earned"
+            flush={modulePerformance.length > 0}
+          >
             {modulePerformance.length === 0 ? (
               <p className="text-muted-foreground py-6 text-center text-sm">
                 Add modules to your assignments to see this breakdown.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-125 text-sm">
-                  <thead>
-                    <tr className="text-muted-foreground border-b text-xs">
-                      <th className="pb-2 text-left font-medium">Module</th>
-                      <th className="pb-2 text-right font-medium">Focus</th>
-                      <th className="pb-2 text-right font-medium">Graded</th>
-                      <th className="pb-2 text-right font-medium">Average</th>
-                      <th className="pb-2 text-right font-medium">Min / point</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {modulePerformance.map((module) => (
-                      <tr key={module.moduleId} className="border-b last:border-b-0">
-                        <td className="py-2.5">
-                          <span className="flex items-center gap-2">
-                            <span
-                              aria-hidden
-                              className="size-2.5 shrink-0 rounded-full"
-                              style={{ backgroundColor: module.color }}
-                            />
-                            <span className="min-w-0">
-                              <span className="block truncate font-medium">{module.name}</span>
-                              {module.code ? (
-                                <span className="text-muted-foreground text-xs">{module.code}</span>
-                              ) : null}
-                            </span>
+              <Table className="min-w-125">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Module</TableHead>
+                    <TableHead className="text-right">Focus</TableHead>
+                    <TableHead className="text-right">Graded</TableHead>
+                    <TableHead className="text-right">Average</TableHead>
+                    <TableHead className="text-right">Min / point</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {modulePerformance.map((module) => (
+                    <TableRow key={module.moduleId}>
+                      <TableCell>
+                        <span className="flex items-center gap-2">
+                          <span
+                            aria-hidden
+                            className="size-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: module.color }}
+                          />
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{module.name}</span>
+                            {module.code ? (
+                              <span className="text-muted-foreground text-xs">{module.code}</span>
+                            ) : null}
                           </span>
-                        </td>
-                        <td className="py-2.5 text-right tabular-nums">
-                          {formatMinutes(module.focusMinutes)}
-                        </td>
-                        <td className="text-muted-foreground py-2.5 text-right tabular-nums">
-                          {module.graded}/{module.assignments}
-                        </td>
-                        <td className="py-2.5 text-right font-medium tabular-nums">
-                          {module.averageGrade === null ? '—' : `${module.averageGrade}%`}
-                        </td>
-                        <td className="text-muted-foreground py-2.5 text-right tabular-nums">
-                          {module.minutesPerPoint === null ? '—' : module.minutesPerPoint}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatMinutes(module.focusMinutes)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-right tabular-nums">
+                        {module.graded}/{module.assignments}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        {module.averageGrade === null ? '—' : `${module.averageGrade}%`}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-right tabular-nums">
+                        {module.minutesPerPoint === null ? '—' : module.minutesPerPoint}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
-          </CardContent>
-        </Card>
+          </SectionCard>
         </div>
       </PlanGate>
     </div>

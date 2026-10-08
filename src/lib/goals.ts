@@ -8,7 +8,10 @@ export const GOAL_OPTIONS = [
   { id: 'focus', emoji: '🧠', label: 'Stay focused' },
   { id: 'balance', emoji: '🧘', label: 'Achieve life balance' },
   { id: 'career', emoji: '🏔️', label: 'Have a successful career' },
-  { id: 'money', emoji: '💰', label: 'Manage my money' },
+  // 'money' was removed with Budget: offering a goal the product can no longer
+  // help with would be a promise it cannot keep. A profile that already stored
+  // it is harmless — both pickers render from this list, so it simply stops
+  // showing, and the next save drops it.
 ] as const
 
 export const MAX_GOALS = 3

@@ -9,7 +9,9 @@ interface LogoProps {
 export function Logo({ className, showWordmark = true }: LogoProps) {
   return (
     <span className={cn('inline-flex items-center gap-2', className)}>
-      <span className="from-primary flex size-8 items-center justify-center rounded-lg bg-gradient-to-br to-indigo-500 text-white shadow-sm">
+      {/* Tokens, not `indigo-500`: the mark now follows the theme like the
+          rest of the chrome, and the glow ties it to the primary action. */}
+      <span className="from-primary to-chart-2 text-primary-foreground flex size-8 items-center justify-center rounded-lg bg-gradient-to-br shadow-[0_4px_14px_-4px_var(--glow-primary)]">
         <GraduationCap aria-hidden className="size-5" />
       </span>
       {showWordmark ? (

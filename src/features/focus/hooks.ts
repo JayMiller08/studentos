@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/app/providers/auth-provider'
-import { announceStreak } from '@/features/gamification/announce-streak'
 import { useAwardXp } from '@/hooks/use-award-xp'
 import { useRealtimeTable } from '@/hooks/use-realtime'
 import { queryKeys } from '@/lib/query-keys'
@@ -18,20 +17,21 @@ export function useStudySessions() {
 }
 
 export function useLogSession() {
-  const { user, profile, refreshProfile } = useAuth()
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const awardXp = useAwardXp()
   return useMutation({
-    mutationFn: (input: LogSessionInput) => focusService.logSession(user!.id, profile, input),
-    onSuccess: (logged, input) => {
-      announceStreak(logged.streak)
+    mutationFn: (input: LogSessionInput) => focusService.logSession(user!.id, input),
+    onSuccess: (session, input) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.studySessions(user!.id) })
       void queryClient.invalidateQueries({ queryKey: queryKeys.pomodoroSessions(user!.id) })
-      // Award XP for completed focus phases (not partial skips or breaks).
+      // A finished focus phase pays XP. Any other time studied — deep work, a
+      // pomodoro stopped early — pays nothing but still keeps the streak.
+      // Either way the database advances the streak, once a day.
       if (input.pomodoro?.kind === 'focus' && input.pomodoro.completed) {
-        void awardXp('pomodoro_completed')
-      } else {
-        void refreshProfile() // streak may have advanced
+        void awardXp('pomodoro_completed', session.id)
+      } else if (input.minutes > 0) {
+        void awardXp('study_session', session.id)
       }
     },
   })

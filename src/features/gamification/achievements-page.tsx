@@ -1,31 +1,25 @@
-import { useQuery } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { Award, Flame, Star, Trophy, Zap } from 'lucide-react'
 import * as React from 'react'
 import { useAuth } from '@/app/providers/auth-provider'
 import { PageHeader } from '@/components/page-header'
+import { AnimatedNumber } from '@/components/ui/animated-number'
 import { Badge } from '@/components/ui/badge'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { queryKeys } from '@/lib/query-keys'
+import { CardContent } from '@/components/ui/card'
+import { HeroCard } from '@/components/ui/hero-card'
+import { ProgressRing } from '@/components/ui/progress-ring'
+import { SectionCard } from '@/components/ui/section-card'
+import { StatTile } from '@/components/ui/stat-tile'
+import { StreakFlame } from '@/components/ui/streak-flame'
+import { XpBar } from '@/components/ui/xp-bar'
+import { useAchievements } from '@/features/gamification/hooks'
 import { cn } from '@/lib/utils'
-import { effectiveStreak, heldFreezes } from '@/lib/streak'
-import { BADGES, gamificationService, levelProgress } from '@/services/gamification-service'
+import { effectiveStreak, heldFreezes, isStreakProtected } from '@/lib/streak'
+import { BADGES, levelProgress } from '@/services/gamification-service'
 
 export function AchievementsPage() {
-  const { user, profile } = useAuth()
-
-  const { data: achievements = [] } = useQuery({
-    queryKey: queryKeys.achievements(user?.id ?? ''),
-    queryFn: () => gamificationService.listAchievements(user!.id),
-    enabled: Boolean(user),
-  })
+  const { profile } = useAuth()
+  const { data: achievements = [] } = useAchievements()
 
   const unlockedIds = React.useMemo(
     () => new Set(achievements.map((achievement) => achievement.badge_id)),
@@ -38,106 +32,112 @@ export function AchievementsPage() {
 
   const progress = levelProgress(profile?.xp ?? 0)
   const unlockedCount = unlockedIds.size
-
   const freezeCount = profile ? (heldFreezes(profile) ?? 0) : 0
-
-  const heroStats = [
-    { icon: Star, label: 'Level', value: String(progress.level) },
-    { icon: Zap, label: 'Total XP', value: (profile?.xp ?? 0).toLocaleString() },
-    {
-      icon: Flame,
-      label:
-        freezeCount > 0
-          ? `Day streak · ${freezeCount} freeze${freezeCount === 1 ? '' : 's'}`
-          : 'Day streak',
-      value: String(effectiveStreak(profile)),
-    },
-    { icon: Trophy, label: 'Badges', value: `${unlockedCount}/${BADGES.length}` },
-  ]
+  const streak = effectiveStreak(profile)
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Achievements" description="Level up as you build better study habits" />
+      <PageHeader
+        title="Achievements"
+        description="Level up as you build better study habits"
+        actions={
+          <StreakFlame days={streak} freezes={freezeCount} protectedToday={isStreakProtected(profile)} />
+        }
+      />
 
-      {/* Level hero */}
-      <Card
-        data-tour="level-hero"
-        className="from-primary/8 border-primary/25 bg-gradient-to-br to-transparent"
-      >
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="from-primary flex size-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br to-indigo-500 text-2xl font-bold text-white shadow-sm">
-              {progress.level}
-            </div>
-            <div className="flex-1">
-              <p className="text-lg font-semibold">Level {progress.level}</p>
-              <p className="text-muted-foreground text-sm">
-                {progress.current} / {progress.needed} XP to level {progress.level + 1}
+      {/* Level hero: the ring carries the progress, so the eye lands on the level first. */}
+      <HeroCard data-tour="level-hero" tone="xp">
+        <CardContent className="space-y-5">
+          <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
+            <ProgressRing
+              value={progress.percent / 100}
+              size={112}
+              thickness={8}
+              arcClassName="stroke-xp"
+              trackClassName="stroke-xp/15"
+              className="size-28 shrink-0"
+            >
+              <span className="font-display text-3xl font-bold tabular-nums">{progress.level}</span>
+              <span className="text-muted-foreground text-[11px] tracking-wide uppercase">Level</span>
+            </ProgressRing>
+            <div className="w-full flex-1 space-y-2 text-center sm:text-left">
+              <p className="text-lg font-semibold">
+                <AnimatedNumber value={profile?.xp ?? 0} className="text-xp" /> XP earned
               </p>
-              <Progress value={progress.percent} className="mt-2 max-w-md" />
+              <p className="text-muted-foreground text-sm">
+                {progress.needed - progress.current} XP to level {progress.level + 1}
+              </p>
+              <XpBar
+                level={progress.level}
+                current={progress.current}
+                needed={progress.needed}
+                compact
+                className="mx-auto max-w-md sm:mx-0"
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {heroStats.map((stat) => (
-              <div key={stat.label} className="bg-card/60 rounded-lg border p-3 text-center">
-                <stat.icon aria-hidden className="text-primary mx-auto size-4" />
-                <p className="mt-1 text-lg font-semibold">{stat.value}</p>
-                <p className="text-muted-foreground text-xs">{stat.label}</p>
-              </div>
-            ))}
+            <StatTile icon={Star} label="Level" value={progress.level} tone="xp" />
+            <StatTile icon={Zap} label="Total XP" value={(profile?.xp ?? 0).toLocaleString()} tone="xp" />
+            <StatTile
+              icon={Flame}
+              label="Day streak"
+              value={streak}
+              tone="streak"
+              hint={freezeCount > 0 ? `${freezeCount} freeze${freezeCount === 1 ? '' : 's'} held` : undefined}
+            />
+            <StatTile icon={Trophy} label="Badges" value={`${unlockedCount}/${BADGES.length}`} tone="primary" />
           </div>
         </CardContent>
-      </Card>
+      </HeroCard>
 
-      {/* Badge grid */}
-      <Card data-tour="badges">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Award aria-hidden className="text-primary size-4" /> Badges
-          </CardTitle>
-          <CardDescription>
-            {unlockedCount} of {BADGES.length} unlocked
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {BADGES.map((badge) => {
-              const unlocked = unlockedIds.has(badge.id)
-              const date = unlockedAt.get(badge.id)
-              return (
-                <div
-                  key={badge.id}
+      <SectionCard
+        data-tour="badges"
+        icon={Award}
+        title="Badges"
+        description={`${unlockedCount} of ${BADGES.length} unlocked`}
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {BADGES.map((badge) => {
+            const unlocked = unlockedIds.has(badge.id)
+            const date = unlockedAt.get(badge.id)
+            return (
+              <div
+                key={badge.id}
+                className={cn(
+                  'group relative flex flex-col items-center gap-1.5 rounded-xl border p-4 text-center transition-all duration-200',
+                  unlocked
+                    ? 'border-xp/30 bg-xp/6 shadow-e1 hover:shadow-e2 hover:-translate-y-0.5'
+                    : 'border-dashed opacity-55 grayscale',
+                )}
+              >
+                {/* Earned badges sit on a soft disc, so the grid reads as a trophy
+                    shelf rather than a list of greyed-out emoji. */}
+                <span
+                  aria-hidden
                   className={cn(
-                    'flex flex-col items-center gap-1.5 rounded-xl border p-4 text-center transition-colors',
-                    unlocked ? 'border-primary/30 bg-primary/5' : 'opacity-60 grayscale',
+                    'flex size-12 items-center justify-center rounded-full text-2xl',
+                    unlocked ? 'bg-xp/12 ring-xp/20 ring-1' : 'bg-muted',
                   )}
                 >
-                  <span aria-hidden className="text-3xl">
-                    {badge.emoji}
-                  </span>
-                  <p className="text-sm font-medium">{badge.name}</p>
-                  <p className="text-muted-foreground text-xs">{badge.description}</p>
-                  {unlocked ? (
-                    date ? (
-                      <Badge variant="success" className="mt-1">
-                        {format(parseISO(date), 'd MMM yyyy')}
-                      </Badge>
-                    ) : (
-                      <Badge variant="success" className="mt-1">
-                        Unlocked
-                      </Badge>
-                    )
-                  ) : badge.xp_reward > 0 ? (
-                    <Badge variant="muted" className="mt-1">
-                      +{badge.xp_reward} XP
-                    </Badge>
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                  {badge.emoji}
+                </span>
+                <p className="text-sm font-medium">{badge.name}</p>
+                <p className="text-muted-foreground text-xs">{badge.description}</p>
+                {unlocked ? (
+                  <Badge variant="success" className="mt-1">
+                    {date ? format(parseISO(date), 'd MMM yyyy') : 'Unlocked'}
+                  </Badge>
+                ) : badge.xp_reward > 0 ? (
+                  <Badge variant="muted" className="mt-1">
+                    +{badge.xp_reward} XP
+                  </Badge>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+      </SectionCard>
     </div>
   )
 }

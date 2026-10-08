@@ -4,11 +4,11 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '@/app/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { type CountedResource, PLANS, type PlanLimits } from '@/lib/plans'
+import { type PlanFeature, PLANS } from '@/lib/plans'
 
 interface PlanGateProps {
   /** A boolean capability — metered resources are surfaced by QuotaMeter instead. */
-  feature: keyof Omit<PlanLimits, CountedResource>
+  feature: PlanFeature
   title: string
   description: string
   children: React.ReactNode

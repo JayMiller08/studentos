@@ -414,6 +414,7 @@ export function CalendarPage() {
         <EmptyState
           icon={CalendarPlus}
           title="Your calendar is empty"
+          art="reading"
           description="Add your class timetable once (weekly repeat) and every week fills itself in."
           action={
             <Button onClick={() => openCreate()}>

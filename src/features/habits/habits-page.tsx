@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { eachDayOfInterval, format, parseISO, subDays } from 'date-fns'
-import { Check, Flame, MoreHorizontal, Plus, Sprout, Trash2 } from 'lucide-react'
+import { CalendarCheck, Check, Flame, Grid3x3, MoreHorizontal, Plus, Sprout, Trash2 } from 'lucide-react'
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -47,6 +47,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useRealtimeTable } from '@/hooks/use-realtime'
 import { useAwardXp } from '@/hooks/use-award-xp'
@@ -284,9 +285,10 @@ export function HabitsPage() {
   const toggleLog = useMutation({
     mutationFn: ({ habit, dateKey }: { habit: Habit; dateKey: string }) =>
       habitsService.toggleLog(user!.id, habit.id, dateKey),
-    onSuccess: (completed) => {
+    onSuccess: (completed, { habit, dateKey }) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.allHabitLogs(user!.id) })
-      if (completed) void awardXp('habit_completed')
+      // One habit, one day: un-ticking and re-ticking it pays once.
+      if (completed) void awardXp('habit_completed', `${habit.id}:${dateKey}`)
     },
   })
 
@@ -325,6 +327,7 @@ export function HabitsPage() {
         <EmptyState
           icon={Sprout}
           title="No habits yet"
+          art="reading"
           description="Start with one tiny daily habit — review your notes for 10 minutes, drink water, sleep on time."
           action={
             <Button onClick={() => setFormOpen(true)}>
@@ -337,36 +340,38 @@ export function HabitsPage() {
           {/* Today + weekly grid */}
           <Card data-tour="habits-week">
             <CardHeader>
-              <CardTitle className="text-base">This week</CardTitle>
+              <CardTitle className="flex items-center gap-2.5 text-base">
+                <CalendarCheck aria-hidden className="text-primary" /> This week
+              </CardTitle>
               <CardDescription>Tap any day to toggle it</CardDescription>
             </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <table className="w-full min-w-130 border-separate border-spacing-y-1.5">
-                <thead>
-                  <tr className="text-muted-foreground text-xs">
-                    <th className="w-56 pb-1 text-left font-medium">Habit</th>
+            <CardContent>
+              <Table variant="grid" className="min-w-130">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-56 text-left">Habit</TableHead>
                     {last7Days.map((day) => (
-                      <th key={toDateKey(day)} className="pb-1 text-center font-medium">
+                      <TableHead key={toDateKey(day)} className="text-center">
                         <span className={cn(toDateKey(day) === todayKey() && 'text-primary font-semibold')}>
                           {format(day, 'EEEEE')}
                           <br />
                           {format(day, 'd')}
                         </span>
-                      </th>
+                      </TableHead>
                     ))}
-                    <th className="w-20 pb-1 text-right font-medium">Streak</th>
-                    <th className="w-10" />
-                  </tr>
-                </thead>
-                <tbody>
+                    <TableHead className="w-20 text-right">Streak</TableHead>
+                    <TableHead className="w-10" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {habitList.map((habit) => {
                     const dates = logDatesByHabit.get(habit.id) ?? new Set<string>()
                     const streak = dailyStreak(dates)
                     const rate = completionRate(dates, habit.created_at, 30)
                     const period = completedThisPeriod(habit, logs)
                     return (
-                      <tr key={habit.id}>
-                        <td>
+                      <TableRow key={habit.id}>
+                        <TableCell>
                           <div className="flex items-center gap-2.5">
                             <span
                               className="flex size-8 shrink-0 items-center justify-center rounded-lg text-base"
@@ -384,12 +389,12 @@ export function HabitsPage() {
                               </p>
                             </div>
                           </div>
-                        </td>
+                        </TableCell>
                         {last7Days.map((day) => {
                           const dayKey = toDateKey(day)
                           const done = dates.has(dayKey)
                           return (
-                            <td key={dayKey} className="text-center">
+                            <TableCell key={dayKey} className="text-center">
                               <button
                                 type="button"
                                 aria-label={`${habit.name} on ${format(day, 'EEEE d MMMM')}: ${done ? 'done' : 'not done'}`}
@@ -403,10 +408,10 @@ export function HabitsPage() {
                               >
                                 {done ? <Check className="size-4" strokeWidth={3} /> : null}
                               </button>
-                            </td>
+                            </TableCell>
                           )
                         })}
-                        <td className="text-right">
+                        <TableCell className="text-right">
                           {streak > 0 ? (
                             <span className="text-warning-foreground dark:text-warning inline-flex items-center gap-1 text-sm font-semibold">
                               <Flame aria-hidden className="size-4" /> {streak}
@@ -414,8 +419,8 @@ export function HabitsPage() {
                           ) : (
                             <span className="text-muted-foreground text-sm">—</span>
                           )}
-                        </td>
-                        <td className="text-right">
+                        </TableCell>
+                        <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon-sm" aria-label={`Options for ${habit.name}`}>
@@ -431,19 +436,21 @@ export function HabitsPage() {
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
 
           {/* Heatmap */}
           <Card data-tour="habits-heatmap">
             <CardHeader>
-              <CardTitle className="text-base">Last 12 weeks</CardTitle>
+              <CardTitle className="flex items-center gap-2.5 text-base">
+                <Grid3x3 aria-hidden className="text-primary" /> Last 12 weeks
+              </CardTitle>
               <CardDescription>Habit completions per day, across all habits</CardDescription>
             </CardHeader>
             <CardContent>

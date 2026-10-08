@@ -136,7 +136,7 @@ export function NotesPage() {
       ),
     onSuccess: (note) => {
       invalidateNotes()
-      void awardXp('note_created')
+      void awardXp('note_created', note.id)
       setEditingNote(note)
     },
   })
