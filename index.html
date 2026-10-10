@@ -1,6 +1,16 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('consent', 'default', {
+        'ad_storage': 'denied',
+        'ad_user_data': 'denied',
+        'ad_personalization': 'denied',
+        'analytics_storage': 'denied'
+      });
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>StudentOS — Your Academic Command Center</title>
@@ -42,8 +52,38 @@
     </script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6972154407460067"
      crossorigin="anonymous"></script>
+    <script>
+      function allConsentGranted() {
+        gtag('consent', 'update', {
+          'ad_user_data': 'granted',
+          'ad_personalization': 'granted',
+          'ad_storage': 'granted',
+          'analytics_storage': 'granted'
+        });
+        const banner = document.getElementById('consent-banner');
+        if (banner) banner.style.display = 'none';
+      }
+
+      function revokeAllConsent() {
+        gtag('consent', 'update', {
+          'analytics_storage': 'denied',
+          'ad_storage': 'denied',
+          'ad_user_data': 'denied',
+          'ad_personalization': 'denied'
+        });
+        const banner = document.getElementById('consent-banner');
+        if (banner) banner.style.display = 'none';
+      }
+    </script>
   </head>
   <body>
+    <div id="consent-banner" style="position: fixed; bottom: 0; left: 0; right: 0; background: #1e293b; color: white; padding: 16px; text-align: center; z-index: 9999; display: flex; justify-content: center; align-items: center; gap: 16px; font-family: system-ui, sans-serif; box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.1);">
+      <span>We use cookies to serve ads and analyze traffic.</span>
+      <div>
+        <button onclick="revokeAllConsent()" style="padding: 8px 16px; background: transparent; color: white; border: 1px solid #475569; border-radius: 6px; cursor: pointer; font-weight: 500; margin-right: 8px;">Decline</button>
+        <button onclick="allConsentGranted()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">Accept all</button>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
