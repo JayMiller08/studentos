@@ -8,7 +8,14 @@
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values
   ('avatars', 'avatars', true, 2097152, array['image/png', 'image/jpeg', 'image/webp']),
-  ('attachments', 'attachments', false, 10485760, null)
+ ('attachments', 'attachments', false, 10485760, array[
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+  'text/markdown',
+  'image/png',
+  'image/jpeg'
+])
 on conflict (id) do nothing;
 
 -- Avatars: public read, owner-scoped writes.
