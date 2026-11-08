@@ -250,15 +250,18 @@ Set environment variables per environment (Development / Preview / Production):
 | `VITE_SUPABASE_ANON_KEY` | your anon/publishable key |
 | `VITE_APP_URL` | the environment's public URL |
 | `VITE_APP_ENV` | `development` \| `preview` \| `production` |
-| `VITE_SITE_URL` | `https://studentos.co.za` — the same in Production **and** Preview |
+| `VITE_SITE_URL` | optional here: already set in the committed `.env.production` |
 
 `VITE_SITE_URL` is the one origin search engines should know: canonical links,
 the sitemap and robots.txt are built from it (`src/lib/site-config.ts`). It is
 not the same as `VITE_APP_URL`, which is where *this* deployment lives so auth
-redirects come back to it. **A production build fails without it** (or with a
-non-https value, or one with a path), so set it before merging. Preview builds
-are production builds too; giving them the production origin is correct, since
-Vercel already marks preview URLs `noindex`.
+redirects come back to it. It is public and the same everywhere, so it lives in
+`.env.production` in the repo, which every production build reads (Preview
+builds included; giving them the production origin is correct, since Vercel
+already marks preview URLs `noindex`). A Vercel variable of the same name
+overrides the file. **A production build fails if the value ends up missing,
+non-https, or with a path** — deleting `.env.production` without setting the
+variable in Vercel is how that happens.
 
 Build settings (auto-detected for Vite):
 
