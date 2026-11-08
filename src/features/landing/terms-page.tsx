@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { absoluteUrl, SUPPORT_EMAIL } from '@/lib/site';
 
 export function TermsPage() {
   return (
@@ -39,7 +40,7 @@ export function TermsPage() {
           <ul className="list-disc pl-6 space-y-2">
             <li><strong>Eligibility:</strong> You must be at least 13 years of age to create an account. If you are under 18 years of age, you represent that your parent or legal guardian has reviewed and agreed to these Terms on your behalf.</li>
             <li><strong>Account Accuracy:</strong> You agree to provide accurate, current, and complete profile information during registration and keep your account details updated.</li>
-            <li><strong>Credential Security:</strong> You are responsible for maintaining the confidentiality of your login credentials and for all activities that occur under your account. You must immediately notify us of any unauthorized access at <a href="mailto:support@studentos.app" className="underline">support@studentos.app</a>.</li>
+            <li><strong>Credential Security:</strong> You are responsible for maintaining the confidentiality of your login credentials and for all activities that occur under your account. You must immediately notify us of any unauthorized access at <a href={`mailto:${SUPPORT_EMAIL}`} className="underline">{SUPPORT_EMAIL}</a>.</li>
           </ul>
         </section>
 
@@ -97,7 +98,7 @@ export function TermsPage() {
         <section>
           <h2 className="text-xl font-semibold mb-2">7. Data Privacy & Transborder Processing</h2>
           <p>
-            Your privacy is governed by our <Link to="/privacy" className="underline">Privacy Policy</Link>, which complies with the Protection of Personal Information Act 4 of 2013 ("POPIA"). By using StudentOS, you acknowledge that backend data is hosted on <strong>Supabase Inc.</strong>, web services on <strong>Vercel Inc.</strong>, payment authorization on <strong>Paystack Payments Limited</strong>, and AI processing on <strong>Google LLC</strong> infrastructure, which involves transborder data flows outside South Africa. You retain rights under POPIA Section 24 to request data access or deletion via <a href="mailto:support@studentos.app" className="underline">support@studentos.app</a> or complain to the South African Information Regulator.
+            Your privacy is governed by our <Link to="/privacy" className="underline">Privacy Policy</Link>, which complies with the Protection of Personal Information Act 4 of 2013 ("POPIA"). By using StudentOS, you acknowledge that backend data is hosted on <strong>Supabase Inc.</strong>, web services on <strong>Vercel Inc.</strong>, payment authorization on <strong>Paystack Payments Limited</strong>, and AI processing on <strong>Google LLC</strong> infrastructure, which involves transborder data flows outside South Africa. You retain rights under POPIA Section 24 to request data access or deletion via <a href={`mailto:${SUPPORT_EMAIL}`} className="underline">{SUPPORT_EMAIL}</a> or complain to the South African Information Regulator.
           </p>
         </section>
 
@@ -131,8 +132,8 @@ export function TermsPage() {
           <p>For questions or support regarding these Terms of Service, please contact us:</p>
           <p>
             <strong>StudentOS Support & Legal Team</strong><br />
-            Email: <a href="mailto:support@studentos.app" className="underline">support@studentos.app</a><br />
-            Website: <a href="https://studentos.app/terms" className="underline">https://studentos.app/terms</a>
+            Email: <a href={`mailto:${SUPPORT_EMAIL}`} className="underline">{SUPPORT_EMAIL}</a><br />
+            Website: <a href={absoluteUrl('/terms')} className="underline">{absoluteUrl('/terms')}</a>
           </p>
         </section>
       </div>

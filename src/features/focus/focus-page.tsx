@@ -228,7 +228,7 @@ export function FocusPage() {
         description="Pomodoro sessions, deep work and your study history"
       />
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_20rem]">
         <Card data-tour="focus-timer">
           <CardHeader>
             <div className="flex items-center justify-between">

@@ -33,7 +33,7 @@ export function AuthLayout() {
       </header>
 
       <main className="relative flex flex-1 items-center justify-center px-4 py-8">
-        <div className="grid w-full max-w-5xl items-center gap-12 lg:grid-cols-[1fr_28rem]">
+        <div className="grid grid-cols-1 w-full max-w-5xl items-center gap-12 lg:grid-cols-[1fr_28rem]">
           <section className="hidden lg:block">
             <h1 className="font-display text-4xl leading-tight font-semibold tracking-tight text-balance">
               Your degree, with a plan behind it.

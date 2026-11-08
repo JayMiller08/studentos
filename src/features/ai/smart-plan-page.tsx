@@ -643,7 +643,7 @@ export function SmartPlanPage() {
               </div>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between gap-2">
                   <Label htmlFor="plan-capacity">Daily study capacity</Label>
@@ -828,7 +828,7 @@ export function SmartPlanPage() {
               </Card>
             ) : null}
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {plan.days.map((day) => (
                 <DayCard
                   key={day.dateKey}

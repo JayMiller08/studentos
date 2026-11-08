@@ -77,7 +77,7 @@ export function PageSkeleton({ cards = 4, stats, className }: PageSkeletonProps)
     <div className={cn('space-y-4', className)} role="status" aria-live="polite" aria-busy="true">
       <span className="sr-only">Loading…</span>
       {stats ? <StatRowSkeleton count={stats} /> : null}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: cards }, (_, index) => (
           <CardSkeleton key={index} lines={index % 2 === 0 ? 4 : 3} />
         ))}

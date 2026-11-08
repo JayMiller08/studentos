@@ -3,11 +3,15 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { siteFiles } from './scripts/vite-site-files.ts'
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    // robots.txt and sitemap.xml from src/lib/site-config.ts, and the guard
+    // that fails a production build without VITE_SITE_URL.
+    siteFiles(),
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icons/*.png'],

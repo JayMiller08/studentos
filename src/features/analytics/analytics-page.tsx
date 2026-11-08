@@ -210,7 +210,7 @@ export function AnalyticsPage() {
         />
       </div>
 
-      <div data-tour="analytics-charts" className="grid gap-4 lg:grid-cols-2">
+      <div data-tour="analytics-charts" className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard icon={Timer} title="Daily focus — last 30 days" description="Minutes of logged focus per day">
           <AreaChart data={dailyFocus} margin={PLOT_MARGIN}>
             <defs>
@@ -264,7 +264,7 @@ export function AnalyticsPage() {
         description="Unlock 8-week trends, per-module time-vs-grade breakdowns, your peak focus hours, grade trajectory and CSV export."
       >
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <ChartCard icon={Timer} title="Study hours — weekly trend" description="Last 8 weeks">
               <BarChart data={weekly} margin={PLOT_MARGIN}>
                 <CartesianGrid {...CHART_GRID} />

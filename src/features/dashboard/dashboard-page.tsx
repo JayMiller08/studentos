@@ -335,8 +335,12 @@ export function DashboardPage() {
         Bento: a six-column track at xl so tiles can be one, two or three
         columns wide. A uniform grid made the quote card look as important as
         the day's tasks; spans let the layout say which is which.
+
+        grid-cols-1 on phones, not the implicit column: an implicit column
+        grows to its widest tile's content, and one long note preview
+        stretched the whole dashboard to 1,136px on a 375px screen.
       */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
         {/* Today's tasks — the tallest tile, and the one students act on */}
         <SectionCard
           data-tour="today"

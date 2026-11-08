@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatPlanPrice, PLAN_ORDER, PLANS } from '@/lib/plans'
+import { SITE_HOST } from '@/lib/site'
 import { cn } from '@/lib/utils'
 
 const FEATURES = [
@@ -130,9 +131,9 @@ function HeroPreview() {
           <span className="size-3 rounded-full bg-red-400" />
           <span className="size-3 rounded-full bg-yellow-400" />
           <span className="size-3 rounded-full bg-green-400" />
-          <span className="text-muted-foreground ml-3 text-xs">studentos.app/app</span>
+          <span className="text-muted-foreground ml-3 text-xs">{SITE_HOST}/app</span>
         </div>
-        <div className="grid gap-4 p-5 text-left sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 p-5 text-left sm:grid-cols-3">
           <div className="from-primary/10 border-primary/20 rounded-xl border bg-gradient-to-br to-transparent p-4 sm:col-span-2">
             <p className="text-primary flex items-center gap-1.5 text-xs font-medium">
               <Sparkles className="size-3.5" /> Today's priority
@@ -183,7 +184,7 @@ function Features() {
           study buddy.
         </p>
       </div>
-      <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {FEATURES.map((feature) => (
           <Card key={feature.title} className="gap-3 py-5">
             <CardContent className="space-y-2">
@@ -213,7 +214,7 @@ function HowItWorks() {
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">How it works</h2>
           <p className="text-muted-foreground mt-3 text-lg">Three steps to a calmer, more productive semester.</p>
         </div>
-        <div className="mt-14 grid gap-8 md:grid-cols-3">
+        <div className="mt-14 grid grid-cols-1 gap-8 md:grid-cols-3">
           {steps.map((step, index) => (
             <div key={step.title} className="text-center">
               <div className="bg-card relative mx-auto flex size-14 items-center justify-center rounded-2xl border shadow-sm">
@@ -238,7 +239,7 @@ function Testimonials() {
       <div className="mx-auto max-w-2xl text-center">
         <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Loved by students</h2>
       </div>
-      <div className="mt-12 grid gap-5 md:grid-cols-3">
+      <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3">
         {TESTIMONIALS.map((testimonial) => (
           <Card key={testimonial.name} className="py-5">
             <CardContent className="space-y-4">
@@ -263,7 +264,7 @@ function Pricing() {
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Simple, student-friendly pricing</h2>
           <p className="text-muted-foreground mt-3 text-lg">Start free. Upgrade when you're ready. Cancel anytime.</p>
         </div>
-        <div className="mt-14 grid gap-5 lg:grid-cols-3">
+        <div className="mt-14 grid grid-cols-1 gap-5 lg:grid-cols-3">
           {PLAN_ORDER.map((planId) => {
             const plan = PLANS[planId]
             const highlighted = planId === 'pro'

@@ -1,15 +1,24 @@
 import { z } from 'zod'
+import { normalizeSiteUrl, siteUrlProblem } from '@/lib/site-config'
 
 /**
  * Runtime-validated environment configuration.
  * Supabase credentials are optional: when absent the app runs in
  * "local demo mode" (device-local persistence, simulated auth).
+ *
+ * `siteUrl` and `appUrl` are different things. `siteUrl` is the one public
+ * origin search engines should know (canonical links, the sitemap), the same
+ * for every deployment. `appUrl` is where *this* deployment lives, for auth
+ * redirects, so a preview build sends people back to the preview.
  */
 const EnvSchema = z.object({
   supabaseUrl: z.url().optional(),
   supabaseAnonKey: z.string().min(20).optional(),
   appUrl: z.url(),
   appEnv: z.enum(['development', 'preview', 'production']),
+  siteUrl: z.url().refine((value) => siteUrlProblem(value, { requireHttps: false }) === null, {
+    message: 'must be an http(s) origin with no path, e.g. https://studentos.co.za',
+  }),
 })
 
 export type Env = z.infer<typeof EnvSchema>
@@ -28,6 +37,9 @@ function loadEnv(): Env {
     supabaseAnonKey: normalize(import.meta.env.VITE_SUPABASE_ANON_KEY),
     appUrl: normalize(import.meta.env.VITE_APP_URL) ?? origin,
     appEnv: normalize(import.meta.env.VITE_APP_ENV) ?? (import.meta.env.DEV ? 'development' : 'production'),
+    // A production build cannot reach here without it (vite.config.ts
+    // refuses to build); in development and tests this origin stands in.
+    siteUrl: normalizeSiteUrl(import.meta.env.VITE_SITE_URL) ?? origin,
   })
 
   if (!parsed.success) {

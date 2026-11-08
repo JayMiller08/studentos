@@ -34,16 +34,21 @@ function StatTile({ label, value, icon: Icon, hint, tone = 'default', className,
     <div
       data-slot="stat-tile"
       className={cn(
-        'bg-card/60 flex flex-col gap-1 rounded-lg border p-3 text-center',
+        // Tighter on phones, where three tiles share a 340px card: at full
+        // size "5h 25m" broke across two lines.
+        'bg-card/60 flex min-w-0 flex-col gap-1 rounded-lg border px-2 py-3 text-center sm:px-3',
         className,
       )}
       {...props}
     >
-      <span className="text-muted-foreground inline-flex items-center justify-center gap-1.5 text-xs">
-        {Icon ? <Icon aria-hidden className={cn('size-3.5', TONES[tone])} /> : null}
+      <span className="text-muted-foreground inline-flex items-center justify-center gap-1.5 text-xs leading-tight">
+        {Icon ? <Icon aria-hidden className={cn('size-3.5 shrink-0', TONES[tone])} /> : null}
         {label}
       </span>
-      <span className={cn('text-xl font-semibold tabular-nums', TONES[tone])}>{value}</span>
+      {/* One line: a number split in two reads as two numbers. */}
+      <span className={cn('text-lg font-semibold whitespace-nowrap tabular-nums sm:text-xl', TONES[tone])}>
+        {value}
+      </span>
       {hint ? <span className="text-muted-foreground text-xs">{hint}</span> : null}
     </div>
   )

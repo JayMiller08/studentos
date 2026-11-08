@@ -27,7 +27,10 @@ export interface TableProps extends React.ComponentProps<'table'> {
  */
 function Table({ className, variant = 'data', ...props }: TableProps) {
   return (
-    <div data-slot="table-wrapper" className="w-full overflow-x-auto">
+    // `relative` so it contains absolutely positioned children: an `sr-only`
+    // label in a header cell otherwise escaped the scroll area and widened
+    // the squad page to 443px on a 360px phone.
+    <div data-slot="table-wrapper" className="relative w-full overflow-x-auto">
       <table
         data-slot="table"
         className={cn('w-full caption-bottom text-sm', VARIANTS[variant], className)}

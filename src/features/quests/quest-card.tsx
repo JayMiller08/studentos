@@ -53,7 +53,9 @@ export function QuestRow({ quest, onClaim, claiming, celebrating, locked }: Ques
         )}
       </ProgressRing>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">{quest.title}</span>
+        {/* Up to two lines: beside a claim button on a phone, one line cut
+            "Reach 150 XP this week" to "Reach 150 XP t…". */}
+        <span className="line-clamp-2 text-sm leading-snug font-medium">{quest.title}</span>
         {/* The bonus sits under the title, not in a column beside it: named
             as a bonus it is too wide for that, and a two-column tile left the
             title room for "Study on 5 d…". It wraps below the status rather

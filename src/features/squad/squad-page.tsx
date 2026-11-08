@@ -218,7 +218,7 @@ function InSquad({ squad }: { squad: MySquad }) {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <SectionCard
           data-tour="squad-standings"
           className="lg:col-span-3"
@@ -266,7 +266,7 @@ export function SquadPage() {
       ) : squad.data ? (
         <InSquad squad={squad.data} />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <StartSquadForm />
           <JoinSquadForm />
         </div>

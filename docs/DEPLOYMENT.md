@@ -117,9 +117,10 @@ update public.profiles set role = 'admin' where email = 'you@example.com';
 
 In the Supabase dashboard → Authentication:
 
-- **Site URL**: your production URL (e.g. `https://studentos.app`).
-- **Redirect URLs**: add `https://studentos.app/auth/callback` and
-  `https://studentos.app/auth/reset-password` (plus preview URLs as needed).
+- **Site URL**: your production URL — the same value as `VITE_SITE_URL`
+  (`https://studentos.co.za`).
+- **Redirect URLs**: add `https://studentos.co.za/auth/callback` and
+  `https://studentos.co.za/auth/reset-password` (plus preview URLs as needed).
 - Enable email confirmations if you want double-opt-in (the app handles the
   "verify your email" state).
 
@@ -249,6 +250,15 @@ Set environment variables per environment (Development / Preview / Production):
 | `VITE_SUPABASE_ANON_KEY` | your anon/publishable key |
 | `VITE_APP_URL` | the environment's public URL |
 | `VITE_APP_ENV` | `development` \| `preview` \| `production` |
+| `VITE_SITE_URL` | `https://studentos.co.za` — the same in Production **and** Preview |
+
+`VITE_SITE_URL` is the one origin search engines should know: canonical links,
+the sitemap and robots.txt are built from it (`src/lib/site-config.ts`). It is
+not the same as `VITE_APP_URL`, which is where *this* deployment lives so auth
+redirects come back to it. **A production build fails without it** (or with a
+non-https value, or one with a path), so set it before merging. Preview builds
+are production builds too; giving them the production origin is correct, since
+Vercel already marks preview URLs `noindex`.
 
 Build settings (auto-detected for Vite):
 

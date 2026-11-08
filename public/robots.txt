@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://studentos.app/sitemap.xml

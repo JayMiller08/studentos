@@ -3,6 +3,7 @@ import { RouterProvider } from 'react-router-dom'
 import { AuthProvider } from '@/app/providers/auth-provider'
 import { ThemeProvider } from '@/app/providers/theme-provider'
 import { router } from '@/app/router'
+import { CookieConsent } from '@/components/cookie-consent'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { PwaReloadPrompt } from '@/components/pwa-reload-prompt'
 import { Toaster } from '@/components/ui/sonner'
@@ -19,6 +20,7 @@ export function App() {
               <RouterProvider router={router} />
               <Toaster />
               <PwaReloadPrompt />
+              <CookieConsent />
             </TooltipProvider>
           </AuthProvider>
         </QueryClientProvider>

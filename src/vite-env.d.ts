@@ -8,6 +8,11 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_ANON_KEY?: string
   /** Public site URL used for auth redirects (differs per environment). */
   readonly VITE_APP_URL?: string
+  /**
+   * The one public origin search engines should know (canonical links, the
+   * sitemap), e.g. https://studentos.co.za. Required for a production build.
+   */
+  readonly VITE_SITE_URL?: string
   /** Optional: environment name surfaced in diagnostics. */
   readonly VITE_APP_ENV?: 'development' | 'preview' | 'production'
 }

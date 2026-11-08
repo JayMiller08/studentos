@@ -2,6 +2,10 @@
 <html lang="en">
   <head>
     <script>
+      // Consent Mode, before any Google script: denied until the visitor
+      // says otherwise. The banner (src/components/cookie-consent.tsx) saves
+      // the answer under "cookie-consent"; a returning visitor who accepted
+      // is granted here, so the banner never has to ask twice.
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('consent', 'default', {
@@ -10,6 +14,16 @@
         'ad_personalization': 'denied',
         'analytics_storage': 'denied'
       });
+      try {
+        if (localStorage.getItem('cookie-consent') === 'accepted') {
+          gtag('consent', 'update', {
+            'ad_storage': 'granted',
+            'ad_user_data': 'granted',
+            'ad_personalization': 'granted',
+            'analytics_storage': 'granted'
+          });
+        }
+      } catch (e) {}
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -35,55 +49,25 @@
       property="og:description"
       content="Never wonder what to work on next. StudentOS turns your assignments, classes and goals into a clear daily plan."
     />
-    <meta property="og:url" content="https://studentos.app" />
-    <meta property="og:image" content="https://studentos.app/icons/icon-512.png" />
+    <meta property="og:url" content="%SITE_URL%" />
+    <meta property="og:image" content="%SITE_URL%/icons/icon-512.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://studentos.app/icons/icon-512.png" />
-    <link rel="canonical" href="https://studentos.app" />
+    <meta name="twitter:image" content="%SITE_URL%/icons/icon-512.png" />
+    <link rel="canonical" href="%SITE_URL%" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "StudentOS",
-        "url": "https://studentos.app",
+        "url": "%SITE_URL%",
         "description": "StudentOS is the operating system for university students.",
         "applicationCategory": "EducationalApplication"
       }
     </script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6972154407460067"
      crossorigin="anonymous"></script>
-    <script>
-      function allConsentGranted() {
-        gtag('consent', 'update', {
-          'ad_user_data': 'granted',
-          'ad_personalization': 'granted',
-          'ad_storage': 'granted',
-          'analytics_storage': 'granted'
-        });
-        const banner = document.getElementById('consent-banner');
-        if (banner) banner.style.display = 'none';
-      }
-
-      function revokeAllConsent() {
-        gtag('consent', 'update', {
-          'analytics_storage': 'denied',
-          'ad_storage': 'denied',
-          'ad_user_data': 'denied',
-          'ad_personalization': 'denied'
-        });
-        const banner = document.getElementById('consent-banner');
-        if (banner) banner.style.display = 'none';
-      }
-    </script>
   </head>
   <body>
-    <div id="consent-banner" style="position: fixed; bottom: 0; left: 0; right: 0; background: #1e293b; color: white; padding: 16px; text-align: center; z-index: 9999; display: flex; justify-content: center; align-items: center; gap: 16px; font-family: system-ui, sans-serif; box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.1);">
-      <span>We use cookies to serve ads and analyze traffic.</span>
-      <div>
-        <button onclick="revokeAllConsent()" style="padding: 8px 16px; background: transparent; color: white; border: 1px solid #475569; border-radius: 6px; cursor: pointer; font-weight: 500; margin-right: 8px;">Decline</button>
-        <button onclick="allConsentGranted()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">Accept all</button>
-      </div>
-    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

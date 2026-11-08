@@ -183,7 +183,7 @@ export function NotesPage() {
 
       <QuotaMeter usage={noteQuota} noun="notes" />
 
-      <div className="grid gap-4 lg:grid-cols-[14rem_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[14rem_1fr]">
         {/* Folders sidebar */}
         <Card data-tour="notes-folders" className="h-fit gap-2 py-3">
           <CardContent className="space-y-1 px-3">
@@ -257,7 +257,7 @@ export function NotesPage() {
               }
             />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {visibleNotes.map((note) => (
                 <NoteCard
                   key={note.id}

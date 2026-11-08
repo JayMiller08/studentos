@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { SITE_URL, SUPPORT_EMAIL } from '@/lib/site';
 
 export function PrivacyPage() {
   return (
@@ -24,8 +25,8 @@ export function PrivacyPage() {
           </p>
           <p>
             <strong>Information Officer Contact:</strong><br />
-            Email: <a href="mailto:support@studentos.app" className="underline">support@studentos.app</a><br />
-            Website: <a href="https://studentos.app" className="underline">https://studentos.app</a>
+            Email: <a href={`mailto:${SUPPORT_EMAIL}`} className="underline">{SUPPORT_EMAIL}</a><br />
+            Website: <a href={SITE_URL} className="underline">{SITE_URL}</a>
           </p>
         </section>
 
@@ -92,7 +93,7 @@ export function PrivacyPage() {
           </p>
           <ul className="list-disc pl-6 space-y-1">
             <li>You may delete your account directly through the Account Settings page within the app.</li>
-            <li>You may submit a formal deletion or correction request by emailing our Information Officer at <a href="mailto:support@studentos.app" className="underline">support@studentos.app</a>.</li>
+            <li>You may submit a formal deletion or correction request by emailing our Information Officer at <a href={`mailto:${SUPPORT_EMAIL}`} className="underline">{SUPPORT_EMAIL}</a>.</li>
           </ul>
           <p>
             Upon receipt of a verified deletion request, we will permanently purge your user profile, academic records, and associated cloud attachments within 30 days, save for records required to be retained by law.

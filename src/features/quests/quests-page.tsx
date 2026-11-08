@@ -29,7 +29,7 @@ export function QuestsPage() {
         description="Three quests a week, the same three for everyone. Finish one, then claim its bonus XP."
       />
 
-      <section aria-label="This week's quests" data-tour="quest-board" className="grid gap-4 md:grid-cols-3">
+      <section aria-label="This week's quests" data-tour="quest-board" className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {board.isLoading ? (
           [0, 1, 2].map((slot) => <CardSkeleton key={slot} lines={4} />)
         ) : board.isError ? (
@@ -50,7 +50,7 @@ export function QuestsPage() {
         )}
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <SectionCard data-tour="quest-rules" className="lg:col-span-2" icon={ScrollText} title="How quests work">
           <ul className="text-muted-foreground space-y-3 text-sm">
             <li>

@@ -160,7 +160,7 @@ function ChoicesForm({
         </fieldset>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-[8rem_1fr_9rem]">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[8rem_1fr_9rem]">
         <div className="space-y-1.5">
           <Label htmlFor={`${idPrefix}-count`}>Questions</Label>
           <Select value={String(choices.count)} onValueChange={(value) => onChange({ ...choices, count: Number(value) })}>
@@ -337,7 +337,7 @@ function UploadPanel({ onUploaded }: { onUploaded: (resource: StudyResource) => 
             </Button>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-[1fr_14rem]">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_14rem]">
             <div className="space-y-1.5">
               <Label htmlFor={`${inputId}-title`}>Name</Label>
               <Input id={`${inputId}-title`} value={title} maxLength={160} onChange={(event) => setTitle(event.target.value)} />
